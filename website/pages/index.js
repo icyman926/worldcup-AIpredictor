@@ -8,107 +8,106 @@ export default function Home() {
         <title>World Cup AI Predictor</title>
       </Head>
       
-      <div style={{textAlign:'center',padding:'120px 20px 80px',background:'linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%)'}}>
-        <div style={{maxWidth:'800px',margin:'0 auto'}}>
-          <div style={{fontSize:'64px',marginBottom:'20px'}}>🏆</div>
-          <h1 style={{fontSize:'56px',fontWeight:'bold',color:'#fff',marginBottom:'20px',background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+      <div className="text-center py-20 px-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-8xl mb-6">🏆</div>
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
             World Cup AI Predictor
           </h1>
-          <p style={{color:'#999',fontSize:'20px',marginBottom:'40px',lineHeight:'1.6'}}>
-            Advanced AI-powered football match prediction system<br/>
-            Multiple predictive models for accurate match forecasting
+          <p className="text-gray-400 text-xl mb-10 max-w-2xl mx-auto">
+            Advanced AI-powered football match prediction system. Multiple predictive models for accurate match forecasting.
           </p>
-          <div style={{display:'flex',gap:'20px',justifyContent:'center',flexWrap:'wrap'}}>
-            <a href="/predict" style={{background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',color:'#fff',padding:'16px 32px',borderRadius:'8px',textDecoration:'none',fontSize:'18px',fontWeight:'bold',transition:'transform 0.2s, box-shadow 0.2s',boxShadow:'0 4px 15px rgba(102, 126, 234, 0.4)'}}>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/predict" className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg hover:shadow-purple-500/25">
               Start Prediction
             </a>
-            <a href="/howto" style={{background:'transparent',color:'#fff',padding:'16px 32px',borderRadius:'8px',textDecoration:'none',fontSize:'18px',fontWeight:'bold',border:'2px solid #667eea',transition:'background 0.2s'}}>
+            <a href="/howto" className="bg-transparent text-white px-8 py-4 rounded-lg font-bold text-lg border-2 border-purple-500 hover:bg-purple-500/10 transition-all">
               Learn How
             </a>
           </div>
         </div>
       </div>
 
-      <div style={{maxWidth:'1200px',margin:'0 auto',padding:'80px 20px'}}>
-        <h2 style={{fontSize:'32px',textAlign:'center',marginBottom:'50px',color:'#fff'}}>Features</h2>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:'30px'}}>
-          <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'30px',textAlign:'center',transition:'transform 0.2s'}}>
-            <div style={{fontSize:'48px',marginBottom:'20px'}}>⚡</div>
-            <h3 style={{fontSize:'20px',marginBottom:'15px',color:'#fff'}}>Real-time Analysis</h3>
-            <p style={{color:'#999',lineHeight:'1.6'}}>Get up-to-date predictions based on the latest team form, player statistics, and historical data.</p>
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        <h2 className="text-3xl text-center text-white mb-12">Features</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-gray-800/50 rounded-xl p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-5xl mb-4">⚡</div>
+            <h3 className="text-xl text-white mb-3">Real-time Analysis</h3>
+            <p className="text-gray-400">Get up-to-date predictions based on the latest team form, player statistics, and historical data.</p>
           </div>
           
-          <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'30px',textAlign:'center',transition:'transform 0.2s'}}>
-            <div style={{fontSize:'48px',marginBottom:'20px'}}>🔮</div>
-            <h3 style={{fontSize:'20px',marginBottom:'15px',color:'#fff'}}>Multiple AI Models</h3>
-            <p style={{color:'#999',lineHeight:'1.6'}}>Combined predictions from Elo rating system, Poisson distribution, and odds analysis for maximum accuracy.</p>
+          <div className="bg-gray-800/50 rounded-xl p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-5xl mb-4">🔮</div>
+            <h3 className="text-xl text-white mb-3">Multiple AI Models</h3>
+            <p className="text-gray-400">Combined predictions from Elo rating system, Poisson distribution, and odds analysis for maximum accuracy.</p>
           </div>
           
-          <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'30px',textAlign:'center',transition:'transform 0.2s'}}>
-            <div style={{fontSize:'48px',marginBottom:'20px'}}>📊</div>
-            <h3 style={{fontSize:'20px',marginBottom:'15px',color:'#fff'}}>Detailed Statistics</h3>
-            <p style={{color:'#999',lineHeight:'1.6'}}>View comprehensive match statistics including expected goals, win probabilities, and confidence scores.</p>
+          <div className="bg-gray-800/50 rounded-xl p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-5xl mb-4">📊</div>
+            <h3 className="text-xl text-white mb-3">Detailed Statistics</h3>
+            <p className="text-gray-400">View comprehensive match statistics including expected goals, win probabilities, and confidence scores.</p>
           </div>
           
-          <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'30px',textAlign:'center',transition:'transform 0.2s'}}>
-            <div style={{fontSize:'48px',marginBottom:'20px'}}>🌍</div>
-            <h3 style={{fontSize:'20px',marginBottom:'15px',color:'#fff'}}>Global Coverage</h3>
-            <p style={{color:'#999',lineHeight:'1.6'}}>Supports all World Cup participating nations with comprehensive historical data.</p>
+          <div className="bg-gray-800/50 rounded-xl p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-5xl mb-4">🌍</div>
+            <h3 className="text-xl text-white mb-3">Global Coverage</h3>
+            <p className="text-gray-400">Supports all 48 World Cup 2026 participating nations with comprehensive historical data.</p>
           </div>
           
-          <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'30px',textAlign:'center',transition:'transform 0.2s'}}>
-            <div style={{fontSize:'48px',marginBottom:'20px'}}>⚽</div>
-            <h3 style={{fontSize:'20px',marginBottom:'15px',color:'#fff'}}>Match Simulation</h3>
-            <p style={{color:'#999',lineHeight:'1.6'}}>Simulate thousands of matches to generate accurate probability distributions.</p>
+          <div className="bg-gray-800/50 rounded-xl p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-5xl mb-4">⚽</div>
+            <h3 className="text-xl text-white mb-3">Match Simulation</h3>
+            <p className="text-gray-400">Simulate thousands of matches to generate accurate probability distributions.</p>
           </div>
           
-          <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'30px',textAlign:'center',transition:'transform 0.2s'}}>
-            <div style={{fontSize:'48px',marginBottom:'20px'}}>📈</div>
-            <h3 style={{fontSize:'20px',marginBottom:'15px',color:'#fff'}}>Performance Tracking</h3>
-            <p style={{color:'#999',lineHeight:'1.6'}}>Track prediction accuracy over time and see how our models perform against real match outcomes.</p>
+          <div className="bg-gray-800/50 rounded-xl p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-5xl mb-4">📈</div>
+            <h3 className="text-xl text-white mb-3">Performance Tracking</h3>
+            <p className="text-gray-400">Track prediction accuracy over time and see how our models perform against real match outcomes.</p>
           </div>
         </div>
       </div>
 
-      <div style={{background:'#1a1a2e',padding:'80px 20px'}}>
-        <div style={{maxWidth:'800px',margin:'0 auto',textAlign:'center'}}>
-          <h2 style={{fontSize:'32px',marginBottom:'20px',color:'#fff'}}>How It Works</h2>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'30px'}}>
+      <div className="bg-gray-800/50 px-4 py-16">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl text-white mb-10">How It Works</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <div style={{width:'80px',height:'80px',margin:'0 auto 20px',background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'32px',fontWeight:'bold',color:'white'}}>1</div>
-              <h4 style={{color:'#fff',marginBottom:'10px'}}>Select Teams</h4>
-              <p style={{color:'#999',fontSize:'14px'}}>Choose two teams for comparison</p>
+              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-3xl font-bold text-white">1</div>
+              <h4 className="text-white mb-2">Select Teams</h4>
+              <p className="text-gray-400 text-sm">Choose two teams for comparison</p>
             </div>
             <div>
-              <div style={{width:'80px',height:'80px',margin:'0 auto 20px',background:'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'32px',fontWeight:'bold',color:'white'}}>2</div>
-              <h4 style={{color:'#fff',marginBottom:'10px'}}>AI Analysis</h4>
-              <p style={{color:'#999',fontSize:'14px'}}>Multiple models analyze the data</p>
+              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center text-3xl font-bold text-white">2</div>
+              <h4 className="text-white mb-2">AI Analysis</h4>
+              <p className="text-gray-400 text-sm">Multiple models analyze the data</p>
             </div>
             <div>
-              <div style={{width:'80px',height:'80px',margin:'0 auto 20px',background:'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'32px',fontWeight:'bold',color:'white'}}>3</div>
-              <h4 style={{color:'#fff',marginBottom:'10px'}}>Generate Results</h4>
-              <p style={{color:'#999',fontSize:'14px'}}>Combine predictions for accuracy</p>
+              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-3xl font-bold text-white">3</div>
+              <h4 className="text-white mb-2">Generate Results</h4>
+              <p className="text-gray-400 text-sm">Combine predictions for accuracy</p>
             </div>
             <div>
-              <div style={{width:'80px',height:'80px',margin:'0 auto 20px',background:'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'32px',fontWeight:'bold',color:'white'}}>4</div>
-              <h4 style={{color:'#fff',marginBottom:'10px'}}>View Predictions</h4>
-              <p style={{color:'#999',fontSize:'14px'}}>Get detailed match forecasts</p>
+              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center text-3xl font-bold text-white">4</div>
+              <h4 className="text-white mb-2">View Predictions</h4>
+              <p className="text-gray-400 text-sm">Get detailed match forecasts</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{maxWidth:'1200px',margin:'0 auto',padding:'80px 20px'}}>
-        <div style={{background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',borderRadius:'12px',padding:'60px',textAlign:'center'}}>
-          <h2 style={{fontSize:'32px',marginBottom:'20px',color:'#fff'}}>Ready to Make Your First Prediction?</h2>
-          <p style={{color:'rgba(255,255,255,0.9)',marginBottom:'40px',fontSize:'18px'}}>
+      <div className="max-w-4xl mx-auto px-4 py-16">
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-10 text-center">
+          <h2 className="text-3xl text-white mb-4">Ready to Make Your First Prediction?</h2>
+          <p className="text-white/80 mb-8 text-lg">
             Join thousands of football enthusiasts who trust our AI predictions
           </p>
-          <div style={{display:'flex',gap:'20px',justifyContent:'center',flexWrap:'wrap'}}>
-            <a href="/predict" style={{background:'#fff',color:'#667eea',padding:'16px 40px',borderRadius:'8px',textDecoration:'none',fontSize:'18px',fontWeight:'bold',transition:'transform 0.2s'}}>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/predict" className="bg-white text-purple-600 px-8 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition-all">
               Match Predictor
             </a>
-            <a href="/champion" style={{background:'rgba(0,0,0,0.3)',color:'#fff',padding:'16px 40px',borderRadius:'8px',textDecoration:'none',fontSize:'18px',fontWeight:'bold',border:'2px solid #fff',transition:'transform 0.2s'}}>
+            <a href="/champion" className="bg-black/30 text-white px-8 py-4 rounded-lg font-bold text-lg border-2 border-white hover:bg-white/10 transition-all">
               🏆 Champion Prediction
             </a>
           </div>
