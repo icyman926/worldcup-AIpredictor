@@ -1,6 +1,5 @@
-import Layout from '../components/Layout';
-import Head from 'next/head';
 import { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
 
 export default function Predict() {
   const [teams, setTeams] = useState([]);
@@ -9,7 +8,6 @@ export default function Predict() {
   const [venue, setVenue] = useState('neutral');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     fetch('/api/teams')
@@ -18,205 +16,268 @@ export default function Predict() {
       .catch(err => console.error('Failed to fetch teams:', err));
   }, []);
 
-  const handlePredict = () => {
-    if (!homeTeam || !awayTeam || homeTeam === awayTeam) {
-      setError('Please select two different teams');
-      return;
-    }
-    setError('');
-    setLoading(true);
+  const handlePredict = async () => {
+    if (!homeTeam || !awayTeam) return;
     
-    fetch('/api/predict/match', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        home_team: homeTeam,
-        away_team: awayTeam,
-        home_odds: 2.5,
-        draw_odds: 3.2,
-        away_odds: 2.8,
-      }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        setResult(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError('Failed to get prediction');
-        setLoading(false);
+    setLoading(true);
+    try {
+      const response = await fetch('/api/predict/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          home_team: homeTeam,
+          away_team: awayTeam
+        })
       });
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error('Prediction failed:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getTeamFlag = (teamName) => {
-    const team = teams.find(t => t.name === teamName);
-    return team ? team.flag : '';
-  };
+  const homeTeamData = teams.find(t => t.name === homeTeam);
+  const awayTeamData = teams.find(t => t.name === awayTeam);
 
   return (
     <Layout>
-      <Head><title>Predict - World Cup AI Predictor</title></Head>
-      <div style={{maxWidth:'800px',margin:'0 auto',padding:'60px 20px'}}>
-        <h1 style={{fontSize:'36px',marginBottom:'20px',textAlign:'center'}}>AI Match Predictor</h1>
-        <p style={{color:'#999',textAlign:'center',marginBottom:'40px'}}>Select two teams and get AI-powered predictions</p>
-        
-        {error && (
-          <div style={{background:'#ff6b6b',color:'#fff',padding:'15px',borderRadius:'8px',marginBottom:'20px',textAlign:'center'}}>
-            {error}
-          </div>
-        )}
-        
-        <div style={{background:'#1a1a2e',borderRadius:'12px',padding:'40px'}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:'20px',alignItems:'center',marginBottom:'30px'}}>
-            <div>
-              <label style={{display:'block',color:'#999',marginBottom:'8px',fontSize:'14px'}}>Home Team</label>
-              <select 
-                value={homeTeam}
-                onChange={(e) => setHomeTeam(e.target.value)}
-                style={{width:'100%',padding:'12px 16px',background:'#16213e',border:'1px solid #333',borderRadius:'8px',color:'#fff',fontSize:'16px',cursor:'pointer'}}
-              >
-                <option value="">Select team...</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.name}>{team.flag} {team.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div style={{textAlign:'center',fontSize:'24px',fontWeight:'bold',color:'#667eea'}}>VS</div>
-            
-            <div>
-              <label style={{display:'block',color:'#999',marginBottom:'8px',fontSize:'14px'}}>Away Team</label>
-              <select 
-                value={awayTeam}
-                onChange={(e) => setAwayTeam(e.target.value)}
-                style={{width:'100%',padding:'12px 16px',background:'#16213e',border:'1px solid #333',borderRadius:'8px',color:'#fff',fontSize:'16px',cursor:'pointer'}}
-              >
-                <option value="">Select team...</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.name}>{team.flag} {team.name}</option>
-                ))}
-              </select>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-white mb-4">⚽ 比赛预测</h1>
+            <p className="text-gray-400">选择两支球队，AI将预测比赛结果</p>
           </div>
 
-          <div style={{marginBottom:'30px'}}>
-            <label style={{display:'block',color:'#999',marginBottom:'8px',fontSize:'14px'}}>Venue</label>
-            <div style={{display:'flex',gap:'10px'}}>
-              {[{value:'home',label:'Home Advantage'}, {value:'neutral',label:'Neutral'}, {value:'away',label:'Away Disadvantage'}].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setVenue(opt.value)}
-                  style={{flex:1,padding:'10px 16px',background:venue === opt.value ? '#667eea' : '#16213e',border:'1px solid #333',borderRadius:'8px',color:'#fff',cursor:'pointer',transition:'background 0.2s'}}
+          <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              <div className="space-y-4">
+                <label className="block text-gray-300 font-medium">主场球队</label>
+                <select
+                  value={homeTeam}
+                  onChange={(e) => setHomeTeam(e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                 >
-                  {opt.label}
+                  <option value="">选择球队...</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.name}>
+                      {team.flag} {team.name} ({team.group}组)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="text-center">
+                <span className="text-4xl font-bold text-white">VS</span>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block text-gray-300 font-medium">客场球队</label>
+                <select
+                  value={awayTeam}
+                  onChange={(e) => setAwayTeam(e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                >
+                  <option value="">选择球队...</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.name}>
+                      {team.flag} {team.name} ({team.group}组)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-6">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setVenue('home')}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                    venue === 'home' 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  🏠 主场优势
                 </button>
-              ))}
+                <button
+                  onClick={() => setVenue('neutral')}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                    venue === 'neutral' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  ⚖️ 中立场地
+                </button>
+                <button
+                  onClick={() => setVenue('away')}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                    venue === 'away' 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  🚗 客场挑战
+                </button>
+              </div>
+
+              <button
+                onClick={handlePredict}
+                disabled={loading || !homeTeam || !awayTeam || homeTeam === awayTeam}
+                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-bold text-lg hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-purple-500/25"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span> 预测中...
+                  </span>
+                ) : (
+                  '🎯 开始预测'
+                )}
+              </button>
             </div>
           </div>
 
-          <button
-            onClick={handlePredict}
-            disabled={loading}
-            style={{width:'100%',padding:'16px',background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',border:'none',borderRadius:'8px',color:'#fff',fontSize:'18px',fontWeight:'bold',cursor:'pointer',transition:'transform 0.2s',opacity:loading ? 0.7 : 1}}
-          >
-            {loading ? (
-              <span style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'10px'}}>
-                <svg style={{animation:'spin 1s linear infinite',width:'20px',height:'20px'}} viewBox="0 0 24 24" fill="none">
-                  <circle style={{borderColor:'#fff',borderTopColor:'transparent'}} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                </svg>
-                Analyzing...
-              </span>
-            ) : (
-              '⚡ Generate Prediction'
-            )}
-          </button>
+          {result && (
+            <div className="space-y-8">
+              <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8">
+                <h2 className="text-2xl font-bold text-white mb-6 text-center">预测结果</h2>
+                
+                <div className="flex justify-center items-center gap-8 mb-8">
+                  <div className="text-center">
+                    <div className="text-6xl mb-2">{homeTeamData?.flag || '🏆'}</div>
+                    <div className="text-xl font-bold text-white">{homeTeam}</div>
+                    <div className="text-gray-400 text-sm">Elo: {homeTeamData?.elo || 'N/A'}</div>
+                  </div>
+                  <div className="text-3xl font-bold text-gray-500">VS</div>
+                  <div className="text-center">
+                    <div className="text-6xl mb-2">{awayTeamData?.flag || '🏆'}</div>
+                    <div className="text-xl font-bold text-white">{awayTeam}</div>
+                    <div className="text-gray-400 text-sm">Elo: {awayTeamData?.elo || 'N/A'}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  <div className="bg-green-900/30 rounded-xl p-6 text-center border border-green-800">
+                    <div className="text-green-400 text-sm mb-2">🏠 主胜</div>
+                    <div className="text-4xl font-bold text-white">{result.probabilities.home}%</div>
+                    <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000"
+                        style={{ width: `${result.probabilities.home}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="bg-yellow-900/30 rounded-xl p-6 text-center border border-yellow-800">
+                    <div className="text-yellow-400 text-sm mb-2">⚖️ 平局</div>
+                    <div className="text-4xl font-bold text-white">{result.probabilities.draw}%</div>
+                    <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-1000"
+                        style={{ width: `${result.probabilities.draw}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="bg-red-900/30 rounded-xl p-6 text-center border border-red-800">
+                    <div className="text-red-400 text-sm mb-2">🚗 客胜</div>
+                    <div className="text-4xl font-bold text-white">{result.probabilities.away}%</div>
+                    <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000"
+                        style={{ width: `${result.probabilities.away}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center gap-4 mb-8">
+                  <div className="bg-gray-700/50 rounded-lg px-6 py-3">
+                    <span className="text-gray-400 text-sm">预期进球</span>
+                    <div className="text-xl font-bold text-white">
+                      {result.expected_goals.home} : {result.expected_goals.away}
+                    </div>
+                  </div>
+                  <div className="bg-gray-700/50 rounded-lg px-6 py-3">
+                    <span className="text-gray-400 text-sm">置信度</span>
+                    <div className="text-xl font-bold text-purple-400">{result.confidence}%</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8">
+                <h3 className="text-xl font-bold text-white mb-4">📊 最可能比分</h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {result.most_likely_scores.map((item, index) => (
+                    <div key={index} className="bg-gray-700/50 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-white">{item.score}</div>
+                      <div className="text-sm text-gray-400">概率: {item.probability}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6">
+                  <h4 className="text-lg font-bold text-blue-400 mb-4">📈 Elo模型</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">主胜</span>
+                      <span className="text-white font-medium">{result.model_breakdown.elo.home}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">平局</span>
+                      <span className="text-white font-medium">{result.model_breakdown.elo.draw}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">客胜</span>
+                      <span className="text-white font-medium">{result.model_breakdown.elo.away}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6">
+                  <h4 className="text-lg font-bold text-green-400 mb-4">⚽ 泊松模型</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">主胜</span>
+                      <span className="text-white font-medium">{result.model_breakdown.poisson.home}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">平局</span>
+                      <span className="text-white font-medium">{result.model_breakdown.poisson.draw}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">客胜</span>
+                      <span className="text-white font-medium">{result.model_breakdown.poisson.away}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6">
+                  <h4 className="text-lg font-bold text-yellow-400 mb-4">💰 赔率分析</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">主胜</span>
+                      <span className="text-white font-medium">{result.model_breakdown.odds.home}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">平局</span>
+                      <span className="text-white font-medium">{result.model_breakdown.odds.draw}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">客胜</span>
+                      <span className="text-white font-medium">{result.model_breakdown.odds.away}%</span>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <div className="text-sm text-gray-400">解读: {result.model_breakdown.odds.interpretation}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {result && (
-          <div style={{marginTop:'40px',background:'#1a1a2e',borderRadius:'12px',padding:'40px'}}>
-            <h3 style={{fontSize:'24px',marginBottom:'30px',textAlign:'center',color:'#fff'}}>Prediction Results</h3>
-            
-            <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:'20px',alignItems:'center',marginBottom:'30px'}}>
-              <div style={{textAlign:'center',padding:'20px',background:'#16213e',borderRadius:'8px'}}>
-                <div style={{fontSize:'28px',fontWeight:'bold',color:'#fff',marginBottom:'10px'}}>
-                  {getTeamFlag(result.home_team)} {result.home_team}
-                </div>
-                <div style={{fontSize:'48px',fontWeight:'bold',color:'#43e97b'}}>{result.probabilities.home}%</div>
-                <div style={{color:'#999',fontSize:'14px'}}>Win Chance</div>
-              </div>
-              
-              <div style={{textAlign:'center'}}>
-                <div style={{fontSize:'28px',fontWeight:'bold',color:'#fff',marginBottom:'10px'}}>Draw</div>
-                <div style={{fontSize:'48px',fontWeight:'bold',color:'#ffd93d'}}>{result.probabilities.draw}%</div>
-                <div style={{color:'#999',fontSize:'14px'}}>Draw Chance</div>
-              </div>
-              
-              <div style={{textAlign:'center',padding:'20px',background:'#16213e',borderRadius:'8px'}}>
-                <div style={{fontSize:'28px',fontWeight:'bold',color:'#fff',marginBottom:'10px'}}>
-                  {getTeamFlag(result.away_team)} {result.away_team}
-                </div>
-                <div style={{fontSize:'48px',fontWeight:'bold',color:'#ff6b6b'}}>{result.probabilities.away}%</div>
-                <div style={{color:'#999',fontSize:'14px'}}>Win Chance</div>
-              </div>
-            </div>
-
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'20px',marginBottom:'30px'}}>
-              <div style={{background:'#16213e',padding:'20px',borderRadius:'8px',textAlign:'center'}}>
-                <div style={{color:'#999',fontSize:'14px',marginBottom:'5px'}}>Expected Goals</div>
-                <div style={{fontSize:'32px',fontWeight:'bold',color:'#00d4ff'}}>{result.expected_goals.home}</div>
-              </div>
-              <div style={{background:'#16213e',padding:'20px',borderRadius:'8px',textAlign:'center'}}>
-                <div style={{color:'#999',fontSize:'14px',marginBottom:'5px'}}>Expected Goals</div>
-                <div style={{fontSize:'32px',fontWeight:'bold',color:'#ff6b6b'}}>{result.expected_goals.away}</div>
-              </div>
-            </div>
-
-            <div style={{background:'#16213e',padding:'20px',borderRadius:'8px',marginBottom:'30px'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'15px'}}>
-                <span style={{color:'#999'}}>Overall Confidence</span>
-                <span style={{fontSize:'24px',fontWeight:'bold',color:'#667eea'}}>{result.confidence}%</span>
-              </div>
-              <div style={{height:'8px',background:'#333',borderRadius:'4px',overflow:'hidden'}}>
-                <div style={{height:'100%',width:`${result.confidence}%`,background:'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',borderRadius:'4px'}}/>
-              </div>
-            </div>
-
-            <div style={{marginBottom:'30px'}}>
-              <h4 style={{fontSize:'18px',marginBottom:'15px',color:'#fff'}}>Most Likely Scores</h4>
-              <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
-                {result.most_likely_scores.map((item, idx) => (
-                  <div key={idx} style={{background:'#16213e',padding:'10px 20px',borderRadius:'8px',display:'flex',alignItems:'center',gap:'10px'}}>
-                    <span style={{fontSize:'18px',fontWeight:'bold',color:'#fff'}}>{item.score}</span>
-                    <span style={{color:'#999',fontSize:'14px'}}>{item.probability}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 style={{fontSize:'18px',marginBottom:'15px',color:'#fff'}}>Model Breakdown</h4>
-              <div style={{display:'grid',gap:'15px'}}>
-                {Object.entries(result.model_breakdown).map(([modelName, modelData]) => (
-                  <div key={modelName} style={{background:'#16213e',padding:'15px',borderRadius:'8px'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'10px'}}>
-                      <span style={{fontWeight:'bold',color:'#fff'}}>{modelName.charAt(0).toUpperCase() + modelName.slice(1)}</span>
-                      {modelData.interpretation && (
-                        <span style={{color:'#667eea',fontSize:'14px'}}>{modelData.interpretation}</span>
-                      )}
-                    </div>
-                    <div style={{display:'flex',height:'20px',gap:'2px',borderRadius:'4px',overflow:'hidden'}}>
-                      <div style={{flex:modelData.home,background:'#43e97b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#000',fontWeight:'bold'}}>{modelData.home}%</div>
-                      <div style={{flex:modelData.draw,background:'#ffd93d',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#000',fontWeight:'bold'}}>{modelData.draw}%</div>
-                      <div style={{flex:modelData.away,background:'#ff6b6b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#000',fontWeight:'bold'}}>{modelData.away}%</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   );
