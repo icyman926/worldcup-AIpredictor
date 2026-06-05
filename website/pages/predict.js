@@ -137,6 +137,12 @@ export default function Predict() {
                 )}
               </button>
             </div>
+
+            {homeTeam === awayTeam && homeTeam && (
+              <div className="mt-4 p-4 bg-red-900/30 border border-red-700 rounded-lg text-center">
+                <span className="text-red-400">⚠️ 请选择两支不同的球队进行预测</span>
+              </div>
+            )}
           </div>
 
           {result && (

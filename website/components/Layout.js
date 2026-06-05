@@ -10,6 +10,7 @@ export default function Layout({ children }) {
         <div className="flex gap-6 flex-wrap">
           <Link href="/" className="text-gray-400 hover:text-white transition-colors">Home</Link>
           <Link href="/predict" className="text-gray-400 hover:text-white transition-colors">Match Predictor</Link>
+          <Link href="/groupstage" className="text-gray-400 hover:text-white transition-colors">Group Stage</Link>
           <Link href="/champion" className="text-gray-400 hover:text-white transition-colors">Champion</Link>
           <Link href="/about" className="text-gray-400 hover:text-white transition-colors">About</Link>
           <Link href="/howto" className="text-gray-400 hover:text-white transition-colors">Tutorial</Link>
