@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   background: #0a0a1a;
   color: #fff;
@@ -35,6 +39,10 @@ select {
   to {
     transform: rotate(360deg);
   }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 ::-webkit-scrollbar {
