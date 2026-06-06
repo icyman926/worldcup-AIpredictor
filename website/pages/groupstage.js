@@ -33,7 +33,7 @@ export default function GroupStage() {
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
   };
 
   return (
@@ -41,8 +41,8 @@ export default function GroupStage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4">📅 小组赛赛程</h1>
-            <p className="text-gray-400">选择小组查看比赛日程和场地信息</p>
+            <h1 className="text-4xl font-bold text-white mb-4">📅 Group Stage Schedule</h1>
+            <p className="text-gray-400">Select a group to view match fixtures and venue information</p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 mb-8">
@@ -59,14 +59,14 @@ export default function GroupStage() {
                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
-                {group}组
+                Group {group}
               </button>
             ))}
           </div>
 
           <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">{selectedGroup}组赛程</h2>
+              <h2 className="text-2xl font-bold text-white">Group {selectedGroup} Fixtures</h2>
               <div className="flex gap-4">
                 {WORLD_CUP_2026_TEAMS.filter(t => t.group === selectedGroup).map(team => (
                   <div key={team.id} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg">
@@ -106,7 +106,7 @@ export default function GroupStage() {
                       </div>
 
                       <div className="text-center">
-                        <div className="text-gray-400 text-sm mb-1">🏟️ 场地</div>
+                        <div className="text-gray-400 text-sm mb-1">🏟️ Stadium</div>
                         <div className="text-white text-sm">{match.stadium}</div>
                       </div>
 
@@ -118,10 +118,10 @@ export default function GroupStage() {
                         >
                           {predictingMatch === match.id ? (
                             <span className="flex items-center gap-2">
-                              <span className="animate-spin">⏳</span> 预测中
+                              <span className="animate-spin">⏳</span> Predicting
                             </span>
                           ) : (
-                            '🎯 预测'
+                            '🎯 Predict'
                           )}
                         </button>
                       </div>
@@ -134,7 +134,7 @@ export default function GroupStage() {
 
           {predictionResult && (
             <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-white mb-6">🔮 {predictionResult.match.id} 预测结果</h3>
+              <h3 className="text-2xl font-bold text-white mb-6">🔮 {predictionResult.match.id} Prediction</h3>
               
               <div className="flex justify-center items-center gap-8 mb-6">
                 <div className="text-center">
@@ -150,28 +150,28 @@ export default function GroupStage() {
 
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-green-900/30 rounded-xl p-4 text-center border border-green-800">
-                  <div className="text-green-400 text-sm">主胜</div>
+                  <div className="text-green-400 text-sm">Home Win</div>
                   <div className="text-3xl font-bold text-white">{predictionResult.result.probabilities.home}%</div>
                 </div>
                 <div className="bg-yellow-900/30 rounded-xl p-4 text-center border border-yellow-800">
-                  <div className="text-yellow-400 text-sm">平局</div>
+                  <div className="text-yellow-400 text-sm">Draw</div>
                   <div className="text-3xl font-bold text-white">{predictionResult.result.probabilities.draw}%</div>
                 </div>
                 <div className="bg-red-900/30 rounded-xl p-4 text-center border border-red-800">
-                  <div className="text-red-400 text-sm">客胜</div>
+                  <div className="text-red-400 text-sm">Away Win</div>
                   <div className="text-3xl font-bold text-white">{predictionResult.result.probabilities.away}%</div>
                 </div>
               </div>
 
               <div className="flex justify-center gap-4">
                 <div className="bg-gray-700/50 rounded-lg px-4 py-2">
-                  <span className="text-gray-400 text-sm">预期进球</span>
+                  <span className="text-gray-400 text-sm">Expected Goals</span>
                   <div className="text-lg font-bold text-white">
                     {predictionResult.result.expected_goals.home} : {predictionResult.result.expected_goals.away}
                   </div>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg px-4 py-2">
-                  <span className="text-gray-400 text-sm">置信度</span>
+                  <span className="text-gray-400 text-sm">Confidence</span>
                   <div className="text-lg font-bold text-purple-400">{predictionResult.result.confidence}%</div>
                 </div>
               </div>
