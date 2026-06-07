@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-}
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  experimental: {
+    cpus: 1,
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

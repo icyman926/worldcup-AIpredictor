@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "clean": "node scripts/clean-next-cache.js",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "14.0.4",
@@ -16,5 +18,8 @@
     "autoprefixer": "^10.0.0",
     "postcss": "^8.0.0",
     "tailwindcss": "^3.0.0"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }

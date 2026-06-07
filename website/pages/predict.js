@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
-import { GROUP_STAGES, getTeamById } from '../lib/predictor';
+import { GROUP_STAGES } from '../lib/predictor';
+
+const venueOptions = [
+  { id: 'home', label: 'Home advantage' },
+  { id: 'neutral', label: 'Neutral venue' },
+  { id: 'away', label: 'Away context' },
+];
 
 export default function Predict() {
   const [teams, setTeams] = useState([]);
@@ -10,381 +16,172 @@ export default function Predict() {
   const [matchInfo, setMatchInfo] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetch('/api/teams')
-      .then(res => res.json())
-      .then(data => setTeams(data))
-      .catch(err => console.error('Failed to fetch teams:', err));
+      .then((res) => res.json())
+      .then(setTeams)
+      .catch(() => setError('Could not load team data.'));
   }, []);
 
-  const getCountryFromStadium = (stadium) => {
-    const canadaStadiums = ['BC Place', 'BMO Field', 'Commonwealth Stadium', 'Vancouver', 'Toronto', 'Edmonton', 'Winnipeg', 'Seattle', 'Lumen Field'];
-    const mexicoStadiums = ['Estadio Azteca', 'Estadio Akron', 'Estadio BBVA', 'Mexico City', 'Guadalajara', 'Monterrey'];
-    
-    if (canadaStadiums.some(s => stadium.includes(s))) {
-      return 'CAN';
-    } else if (mexicoStadiums.some(s => stadium.includes(s))) {
-      return 'MEX';
-    }
-    return 'USA';
-  };
+  const selected = useMemo(() => {
+    return {
+      home: teams.find((team) => team.name === homeTeam),
+      away: teams.find((team) => team.name === awayTeam),
+    };
+  }, [awayTeam, homeTeam, teams]);
 
   useEffect(() => {
-    if (homeTeam && awayTeam && homeTeam !== awayTeam) {
-      const homeTeamData = teams.find(t => t.name === homeTeam);
-      const awayTeamData = teams.find(t => t.name === awayTeam);
-      
-      if (homeTeamData && awayTeamData) {
-        const homeId = homeTeamData.id;
-        const awayId = awayTeamData.id;
-        
-        let foundMatch = null;
-        for (const group of GROUP_STAGES) {
-          for (const match of group.matches) {
-            if ((match.team1 === homeId && match.team2 === awayId) ||
-                (match.team1 === awayId && match.team2 === homeId)) {
-              foundMatch = match;
-              break;
-            }
-          }
-          if (foundMatch) break;
-        }
-        
-        if (foundMatch) {
-          const actualHomeTeamId = foundMatch.team1;
-          const stadiumCountry = getCountryFromStadium(foundMatch.stadium);
-          
-          let actualVenue = 'neutral';
-          if (stadiumCountry === 'USA' && homeId === 'USA') {
-            actualVenue = homeId === actualHomeTeamId ? 'home' : 'away';
-          } else if (stadiumCountry === 'MEX' && homeId === 'MEX') {
-            actualVenue = homeId === actualHomeTeamId ? 'home' : 'away';
-          } else if (stadiumCountry === 'CAN' && homeId === 'CAN') {
-            actualVenue = homeId === actualHomeTeamId ? 'home' : 'away';
-          }
-          
-          setMatchInfo({
-            ...foundMatch,
-            isHomeTeam1: foundMatch.team1 === homeId,
-            homeTeamName: homeTeam,
-            awayTeamName: awayTeam,
-            country: stadiumCountry,
-            actualVenue: actualVenue
-          });
-          
-          setVenue(actualVenue);
-        } else {
-          setMatchInfo(null);
-          setVenue('neutral');
-        }
-      }
-    } else {
+    setResult(null);
+    if (!selected.home || !selected.away || selected.home.id === selected.away.id) {
       setMatchInfo(null);
+      return;
     }
-  }, [homeTeam, awayTeam, teams]);
 
-  const [error, setError] = useState('');
+    const found = GROUP_STAGES
+      .flatMap((group) => group.matches)
+      .find((match) => (
+        (match.team1 === selected.home.id && match.team2 === selected.away.id) ||
+        (match.team1 === selected.away.id && match.team2 === selected.home.id)
+      ));
+
+    if (!found) {
+      setMatchInfo(null);
+      setVenue('neutral');
+      return;
+    }
+
+    setMatchInfo(found);
+    const hostId = inferHostTeam(found.stadium);
+    if (hostId && selected.home.id === hostId) setVenue('home');
+    else if (hostId && selected.away.id === hostId) setVenue('away');
+    else setVenue('neutral');
+  }, [selected.home, selected.away]);
 
   const handlePredict = async () => {
-    if (!homeTeam || !awayTeam) return;
-    
+    if (!homeTeam || !awayTeam || homeTeam === awayTeam) return;
+
     setLoading(true);
     setError('');
     try {
       const response = await fetch('/api/predict/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          home_team: homeTeam,
-          away_team: awayTeam,
-          venue: venue
-        })
+        body: JSON.stringify({ home_team: homeTeam, away_team: awayTeam, venue }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       const data = await response.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setResult(data);
-      }
-    } catch (error) {
-      console.error('Prediction failed:', error);
-      setError('Failed to get prediction. Please try again.');
+      if (!response.ok || data.error) throw new Error(data.error || 'Prediction failed');
+      setResult(data);
+    } catch (err) {
+      setError(err.message || 'Failed to get prediction. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const homeTeamData = teams.find(t => t.name === homeTeam);
-  const awayTeamData = teams.find(t => t.name === awayTeam);
-
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', weekday: 'long' });
-  };
-
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4">⚽ Match Predictor</h1>
-            <p className="text-gray-400">Select two teams and AI will predict the outcome</p>
+      <div className="min-h-screen bg-slate-950 px-4 py-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Match predictor</p>
+            <h1 className="mt-3 text-4xl font-bold text-white">Compare two teams</h1>
+            <p className="mt-3 max-w-2xl text-slate-400">
+              Select a fixture or any two teams to generate probabilities, expected goals, and model-level explanations.
+            </p>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-              <div className="space-y-4">
-                <label className="block text-gray-300 font-medium">Home Team</label>
-                <select
-                  value={homeTeam}
-                  onChange={(e) => setHomeTeam(e.target.value)}
-                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                >
-                  <option value="">Select Team...</option>
-                  {teams.map(team => (
-                    <option key={team.id} value={team.name}>
-                      {team.flag} {team.name} (Group {team.group})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="text-center">
-                <span className="text-4xl font-bold text-white">VS</span>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-gray-300 font-medium">Away Team</label>
-                <select
-                  value={awayTeam}
-                  onChange={(e) => setAwayTeam(e.target.value)}
-                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                >
-                  <option value="">Select Team...</option>
-                  {teams.map(team => (
-                    <option key={team.id} value={team.name}>
-                      {team.flag} {team.name} (Group {team.group})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-8">
+            <div className="grid gap-5 md:grid-cols-[1fr_auto_1fr] md:items-end">
+              <TeamSelect label="Team A" value={homeTeam} onChange={setHomeTeam} teams={teams} />
+              <div className="pb-3 text-center text-2xl font-black text-slate-500">VS</div>
+              <TeamSelect label="Team B" value={awayTeam} onChange={setAwayTeam} teams={teams} />
             </div>
 
             {matchInfo && (
-              <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-xl border border-blue-700">
-                <h3 className="text-lg font-bold text-blue-400 mb-4">🏟️ Match Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <div className="text-gray-400 text-sm">Match Date</div>
-                    <div className="text-white font-medium">{formatDate(matchInfo.date)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Match Time</div>
-                    <div className="text-white font-medium">{matchInfo.time}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Stadium</div>
-                    <div className="text-white font-medium">{matchInfo.stadium}</div>
-                  </div>
-                </div>
+              <div className="mt-6 grid gap-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm md:grid-cols-3">
+                <Info label="Date" value={formatDate(matchInfo.date)} />
+                <Info label="Kickoff" value={matchInfo.time} />
+                <Info label="Stadium" value={matchInfo.stadium} />
               </div>
             )}
 
-            <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-6">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setVenue('home')}
-                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                    venue === 'home' 
-                      ? 'bg-green-600 text-white' 
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🏠 Home Advantage
-                </button>
-                <button
-                  onClick={() => setVenue('neutral')}
-                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                    venue === 'neutral' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  ⚖️ Neutral Venue
-                </button>
-                <button
-                  onClick={() => setVenue('away')}
-                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                    venue === 'away' 
-                      ? 'bg-red-600 text-white' 
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🚗 Away Match
-                </button>
+            <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap gap-2">
+                {venueOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => setVenue(option.id)}
+                    className={`rounded-md px-4 py-2 text-sm font-semibold transition ${venue === option.id ? 'bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-
               <button
                 onClick={handlePredict}
                 disabled={loading || !homeTeam || !awayTeam || homeTeam === awayTeam}
-                className="px-12 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-bold text-lg hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-purple-500/25"
+                className="rounded-md bg-white px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="animate-spin">⏳</span> Predicting...
-                  </span>
-                ) : (
-                  '🎯 Start Prediction'
-                )}
+                {loading ? 'Predicting...' : 'Generate prediction'}
               </button>
             </div>
 
             {homeTeam === awayTeam && homeTeam && (
-              <div className="mt-4 p-4 bg-red-900/30 border border-red-700 rounded-lg text-center">
-                <span className="text-red-400">⚠️ Please select two different teams for prediction</span>
+              <div className="mt-5 rounded-md border border-red-500/30 bg-red-500/10 p-4 text-center text-red-200">
+                Select two different teams.
+              </div>
+            )}
+            {error && (
+              <div className="mt-5 rounded-md border border-red-500/30 bg-red-500/10 p-4 text-center text-red-200">
+                {error}
               </div>
             )}
           </div>
 
           {result && (
-            <div className="space-y-8">
-              <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8">
-                <h2 className="text-2xl font-bold text-white mb-6 text-center">Prediction Result</h2>
-                
-                <div className="flex justify-center items-center gap-8 mb-8">
-                  <div className="text-center">
-                    <div className="text-6xl mb-2">{homeTeamData?.flag || '🏆'}</div>
-                    <div className="text-xl font-bold text-white">{homeTeam}</div>
-                    <div className="text-gray-400 text-sm">Elo: {homeTeamData?.elo || 'N/A'}</div>
+            <div className="mt-8 space-y-6">
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Prediction result</h2>
+                    <p className="mt-1 text-slate-400">{homeTeam} vs {awayTeam}</p>
                   </div>
-                  <div className="text-3xl font-bold text-gray-500">VS</div>
-                  <div className="text-center">
-                    <div className="text-6xl mb-2">{awayTeamData?.flag || '🏆'}</div>
-                    <div className="text-xl font-bold text-white">{awayTeam}</div>
-                    <div className="text-gray-400 text-sm">Elo: {awayTeamData?.elo || 'N/A'}</div>
+                  <div className="rounded-md bg-slate-900 px-4 py-3 text-sm text-slate-300">
+                    Confidence <span className="font-bold text-emerald-300">{result.confidence}%</span>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="bg-green-900/30 rounded-xl p-6 text-center border border-green-800">
-                    <div className="text-green-400 text-sm mb-2">🏠 Home Win</div>
-                    <div className="text-4xl font-bold text-white">{result.probabilities.home}%</div>
-                    <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000"
-                        style={{ width: `${result.probabilities.home}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-yellow-900/30 rounded-xl p-6 text-center border border-yellow-800">
-                    <div className="text-yellow-400 text-sm mb-2">⚖️ Draw</div>
-                    <div className="text-4xl font-bold text-white">{result.probabilities.draw}%</div>
-                    <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-1000"
-                        style={{ width: `${result.probabilities.draw}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-red-900/30 rounded-xl p-6 text-center border border-red-800">
-                    <div className="text-red-400 text-sm mb-2">🚗 Away Win</div>
-                    <div className="text-4xl font-bold text-white">{result.probabilities.away}%</div>
-                    <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000"
-                        style={{ width: `${result.probabilities.away}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-center gap-4 mb-8">
-                  <div className="bg-gray-700/50 rounded-lg px-6 py-3">
-                    <span className="text-gray-400 text-sm">Expected Goals</span>
-                    <div className="text-xl font-bold text-white">
-                      {result.expected_goals.home} : {result.expected_goals.away}
-                    </div>
-                  </div>
-                  <div className="bg-gray-700/50 rounded-lg px-6 py-3">
-                    <span className="text-gray-400 text-sm">Confidence</span>
-                    <div className="text-xl font-bold text-purple-400">{result.confidence}%</div>
-                  </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <ProbabilityCard label={homeTeam + ' win'} value={result.probabilities.home} tone="emerald" />
+                  <ProbabilityCard label="Draw" value={result.probabilities.draw} tone="amber" />
+                  <ProbabilityCard label={awayTeam + ' win'} value={result.probabilities.away} tone="sky" />
                 </div>
               </div>
 
-              <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8">
-                <h3 className="text-xl font-bold text-white mb-4">📊 Most Likely Scores</h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {result.most_likely_scores.map((item, index) => (
-                    <div key={index} className="bg-gray-700/50 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-white">{item.score}</div>
-                      <div className="text-sm text-gray-400">Prob: {item.probability}%</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-blue-400 mb-4">📈 Elo Model</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Home Win</span>
-                      <span className="text-white font-medium">{result.model_breakdown.elo.home}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Draw</span>
-                      <span className="text-white font-medium">{result.model_breakdown.elo.draw}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Away Win</span>
-                      <span className="text-white font-medium">{result.model_breakdown.elo.away}%</span>
-                    </div>
+              <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+                  <h3 className="text-xl font-bold text-white">Most likely scores</h3>
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                    {result.most_likely_scores.map((item) => (
+                      <div key={item.score} className="rounded-md bg-slate-900 p-4 text-center">
+                        <div className="text-2xl font-bold text-white">{item.score}</div>
+                        <div className="mt-1 text-sm text-slate-400">{item.probability}%</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <Info label="Expected goals" value={result.expected_goals.home + ' : ' + result.expected_goals.away} />
+                    <Info label="Match strength" value={result.match_strength} />
                   </div>
                 </div>
 
-                <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-green-400 mb-4">⚽ Poisson Model</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Home Win</span>
-                      <span className="text-white font-medium">{result.model_breakdown.poisson.home}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Draw</span>
-                      <span className="text-white font-medium">{result.model_breakdown.poisson.draw}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Away Win</span>
-                      <span className="text-white font-medium">{result.model_breakdown.poisson.away}%</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-yellow-400 mb-4">💰 Odds Analysis</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Home Win</span>
-                      <span className="text-white font-medium">{result.model_breakdown.odds.home}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Draw</span>
-                      <span className="text-white font-medium">{result.model_breakdown.odds.draw}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Away Win</span>
-                      <span className="text-white font-medium">{result.model_breakdown.odds.away}%</span>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-gray-700">
-                      <div className="text-sm text-gray-400">Interpretation: {result.model_breakdown.odds.interpretation}</div>
-                    </div>
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+                  <h3 className="text-xl font-bold text-white">Model breakdown</h3>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <ModelPanel title="Elo" data={result.model_breakdown.elo} />
+                    <ModelPanel title="Poisson" data={result.model_breakdown.poisson} />
+                    <ModelPanel title="Odds" data={result.model_breakdown.odds} />
                   </div>
                 </div>
               </div>
@@ -394,4 +191,87 @@ export default function Predict() {
       </div>
     </Layout>
   );
+}
+
+function TeamSelect({ label, value, onChange, teams }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-300">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+      >
+        <option value="">Select team...</option>
+        {teams.map((team) => (
+          <option key={team.id} value={team.name}>{team.flag} {team.name} - Group {team.group}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ProbabilityCard({ label, value, tone }) {
+  const color = {
+    emerald: 'bg-emerald-400 text-emerald-200',
+    amber: 'bg-amber-300 text-amber-200',
+    sky: 'bg-sky-400 text-sky-200',
+  }[tone];
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-slate-900 p-5">
+      <div className={`mb-3 text-sm font-semibold ${color.split(' ')[1]}`}>{label}</div>
+      <div className="text-4xl font-black text-white">{value}%</div>
+      <div className="mt-4 h-2 rounded-full bg-white/10">
+        <div className={`h-2 rounded-full ${color.split(' ')[0]}`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ModelPanel({ title, data }) {
+  return (
+    <div className="rounded-md bg-slate-900 p-4">
+      <h4 className="font-bold text-white">{title}</h4>
+      <div className="mt-3 space-y-2 text-sm">
+        <InfoRow label="Home" value={data.home + '%'} />
+        <InfoRow label="Draw" value={data.draw + '%'} />
+        <InfoRow label="Away" value={data.away + '%'} />
+      </div>
+      {data.interpretation && <p className="mt-3 text-xs text-slate-500">{data.interpretation}</p>}
+    </div>
+  );
+}
+
+function Info({ label, value }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="mt-1 font-semibold text-white">{value}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-slate-400">{label}</span>
+      <span className="font-semibold text-white">{value}</span>
+    </div>
+  );
+}
+
+function inferHostTeam(stadium) {
+  if (/Mexico|Guadalajara|Monterrey|Azteca|Akron|BBVA/.test(stadium)) return 'MEX';
+  if (/Toronto|Vancouver|BMO|BC Place/.test(stadium)) return 'CAN';
+  if (/Los Angeles|Seattle|Atlanta|Houston|Dallas|Kansas City|Miami|Philadelphia|Boston|New York|Santa Clara|Arlington|Foxborough|East Rutherford/.test(stadium)) return 'USA';
+  return null;
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  });
 }

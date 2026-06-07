@@ -2,133 +2,81 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 
 export default function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [message, setMessage] = useState({ type: '', text: '' });
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
-    if (!username || !email || !password || !confirmPassword) {
-      setError('All fields are required');
+  const handleRegister = (event) => {
+    event.preventDefault();
+    setMessage({ type: '', text: '' });
+
+    if (form.password !== form.confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match.' });
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (form.password.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters.' });
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+    localStorage.setItem('user', JSON.stringify({
+      username: form.username,
+      email: form.email,
+      password: form.password,
+      createdAt: new Date().toISOString(),
+    }));
 
-    const user = {
-      username,
-      email,
-      password,
-      createdAt: new Date().toISOString()
-    };
-
-    localStorage.setItem('user', JSON.stringify(user));
-    setSuccess('Registration successful! You can now login.');
-    setUsername('');
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
+    setForm({ username: '', email: '', password: '', confirmPassword: '' });
+    setMessage({ type: 'success', text: 'Account saved locally. You can now sign in.' });
   };
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-12 px-4">
-        <div className="max-w-md mx-auto">
-          <div className="text-center mb-12">
-            <div className="text-6xl mb-4">🏆</div>
-            <h1 className="text-4xl font-bold text-white mb-4">Create Account</h1>
-            <p className="text-gray-400">Join the World Cup prediction community</p>
+      <div className="min-h-screen bg-slate-950 px-4 py-10">
+        <div className="mx-auto max-w-md">
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold text-white">Create account</h1>
+            <p className="mt-3 text-slate-400">This demo account is stored only in your browser.</p>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8">
-            {error && (
-              <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6 text-center">
-                <span className="text-red-400">⚠️ {error}</span>
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+            {message.text && (
+              <div className={`mb-5 rounded-md border p-3 ${message.type === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-200' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'}`}>
+                {message.text}
               </div>
             )}
-
-            {success && (
-              <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 mb-6 text-center">
-                <span className="text-green-400">✅ {success}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleRegister} className="space-y-6">
-              <div>
-                <label className="block text-gray-300 font-medium mb-2">Username</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username..."
-                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-300 font-medium mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email..."
-                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-300 font-medium mb-2">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password..."
-                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-300 font-medium mb-2">Confirm Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password..."
-                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-bold text-lg hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg hover:shadow-purple-500/25"
-              >
-                🚀 Create Account
+            <form onSubmit={handleRegister} className="space-y-5">
+              <Field label="Username" value={form.username} onChange={(value) => update('username', value)} />
+              <Field label="Email" type="email" value={form.email} onChange={(value) => update('email', value)} />
+              <Field label="Password" type="password" value={form.password} onChange={(value) => update('password', value)} />
+              <Field label="Confirm password" type="password" value={form.confirmPassword} onChange={(value) => update('confirmPassword', value)} />
+              <button className="w-full rounded-md bg-white px-5 py-3 font-bold text-slate-950 transition hover:bg-emerald-200">
+                Create account
               </button>
             </form>
-
-            <div className="mt-6 text-center">
-              <span className="text-gray-400">Already have an account? </span>
-              <a href="/login" className="text-purple-400 hover:text-purple-300 transition-colors">
-                Login here
-              </a>
-            </div>
+            <p className="mt-5 text-center text-sm text-slate-400">
+              Already registered? <a href="/login" className="font-bold text-emerald-300">Login here</a>
+            </p>
           </div>
         </div>
       </div>
     </Layout>
+  );
+}
+
+function Field({ label, type = 'text', value, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-300">{label}</span>
+      <input
+        required
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+      />
+    </label>
   );
 }
