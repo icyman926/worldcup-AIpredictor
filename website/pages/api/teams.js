@@ -1,16 +1,20 @@
-import { WORLD_CUP_2026_TEAMS, GROUP_STAGES } from '../../lib/predictor';
+import { WORLD_CUP_2026_TEAMS } from '../../lib/predictor';
+
+const toPublicTeam = (team) => {
+  const { name_cn, ...publicTeam } = team;
+  return publicTeam;
+};
 
 export default function handler(req, res) {
-  if (req.method === 'GET') {
-    const { group } = req.query;
-    
-    if (group) {
-      const teams = WORLD_CUP_2026_TEAMS.filter(t => t.group === group.toUpperCase());
-      res.status(200).json(teams);
-    } else {
-      res.status(200).json(WORLD_CUP_2026_TEAMS);
-    }
-  } else {
+  if (req.method !== 'GET') {
     res.status(405).json({ message: 'Method not allowed' });
+    return;
   }
+
+  const { group } = req.query;
+  const teams = group
+    ? WORLD_CUP_2026_TEAMS.filter((team) => team.group === group.toUpperCase())
+    : WORLD_CUP_2026_TEAMS;
+
+  res.status(200).json(teams.map(toPublicTeam));
 }

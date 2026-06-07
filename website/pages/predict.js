@@ -8,11 +8,14 @@ const venueOptions = [
   { id: 'away', label: 'Away context' },
 ];
 
+const emptyOdds = { home: '', draw: '', away: '' };
+
 export default function Predict() {
   const [teams, setTeams] = useState([]);
   const [homeTeam, setHomeTeam] = useState('');
   const [awayTeam, setAwayTeam] = useState('');
   const [venue, setVenue] = useState('neutral');
+  const [odds, setOdds] = useState(emptyOdds);
   const [matchInfo, setMatchInfo] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -25,12 +28,13 @@ export default function Predict() {
       .catch(() => setError('Could not load team data.'));
   }, []);
 
-  const selected = useMemo(() => {
-    return {
-      home: teams.find((team) => team.name === homeTeam),
-      away: teams.find((team) => team.name === awayTeam),
-    };
-  }, [awayTeam, homeTeam, teams]);
+  const selected = useMemo(() => ({
+    home: teams.find((team) => team.name === homeTeam),
+    away: teams.find((team) => team.name === awayTeam),
+  }), [awayTeam, homeTeam, teams]);
+
+  const oddsReady = Number(odds.home) > 1 && Number(odds.draw) > 1 && Number(odds.away) > 1;
+  const manualOddsAnalysis = oddsReady ? analyzeOdds(Number(odds.home), Number(odds.draw), Number(odds.away)) : null;
 
   useEffect(() => {
     setResult(null);
@@ -59,16 +63,47 @@ export default function Predict() {
     else setVenue('neutral');
   }, [selected.home, selected.away]);
 
+  const fillEstimatedOdds = () => {
+    if (!selected.home || !selected.away) {
+      setOdds({ home: '2.35', draw: '3.20', away: '2.95' });
+      return;
+    }
+
+    const diff = (selected.home.elo || 1800) - (selected.away.elo || 1800);
+    const homeProb = clamp(0.36 + diff / 1600, 0.22, 0.58);
+    const drawProb = clamp(0.27 - Math.abs(diff) / 5000, 0.20, 0.30);
+    const awayProb = Math.max(0.12, 1 - homeProb - drawProb);
+    const margin = 1.06;
+
+    setOdds({
+      home: (1 / (homeProb * margin)).toFixed(2),
+      draw: (1 / (drawProb * margin)).toFixed(2),
+      away: (1 / (awayProb * margin)).toFixed(2),
+    });
+  };
+
   const handlePredict = async () => {
     if (!homeTeam || !awayTeam || homeTeam === awayTeam) return;
 
     setLoading(true);
     setError('');
     try {
+      const payload = {
+        home_team: homeTeam,
+        away_team: awayTeam,
+        venue,
+      };
+
+      if (oddsReady) {
+        payload.home_odds = Number(odds.home);
+        payload.draw_odds = Number(odds.draw);
+        payload.away_odds = Number(odds.away);
+      }
+
       const response = await fetch('/api/predict/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ home_team: homeTeam, away_team: awayTeam, venue }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.error || 'Prediction failed');
@@ -86,9 +121,9 @@ export default function Predict() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Match predictor</p>
-            <h1 className="mt-3 text-4xl font-bold text-white">Compare two teams</h1>
-            <p className="mt-3 max-w-2xl text-slate-400">
-              Select a fixture or any two teams to generate probabilities, expected goals, and model-level explanations.
+            <h1 className="mt-3 text-4xl font-bold text-white">Compare two national teams</h1>
+            <p className="mt-3 max-w-3xl text-slate-400">
+              Select two countries, review their flag, group, confederation, and rating, add bookmaker odds when available, then generate transparent probabilities.
             </p>
           </div>
 
@@ -99,6 +134,13 @@ export default function Predict() {
               <TeamSelect label="Team B" value={awayTeam} onChange={setAwayTeam} teams={teams} />
             </div>
 
+            {(selected.home || selected.away) && (
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <TeamCard title="Team A profile" team={selected.home} />
+                <TeamCard title="Team B profile" team={selected.away} />
+              </div>
+            )}
+
             {matchInfo && (
               <div className="mt-6 grid gap-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm md:grid-cols-3">
                 <Info label="Date" value={formatDate(matchInfo.date)} />
@@ -106,6 +148,37 @@ export default function Predict() {
                 <Info label="Stadium" value={matchInfo.stadium} />
               </div>
             )}
+
+            <div className="mt-6 rounded-lg border border-white/10 bg-slate-900 p-5">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Odds input and market signal</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Enter decimal odds from bookmakers or an odds API. The model converts them into implied probabilities, removes bookmaker margin, and treats the market as the highest-weight signal.
+                  </p>
+                </div>
+                <button onClick={fillEstimatedOdds} className="rounded-md border border-white/15 px-4 py-2 text-sm font-bold text-slate-200 transition hover:bg-white/10">
+                  Fill sample odds
+                </button>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <OddsInput label={homeTeam || 'Team A'} value={odds.home} onChange={(value) => setOdds((current) => ({ ...current, home: value }))} />
+                <OddsInput label="Draw" value={odds.draw} onChange={(value) => setOdds((current) => ({ ...current, draw: value }))} />
+                <OddsInput label={awayTeam || 'Team B'} value={odds.away} onChange={(value) => setOdds((current) => ({ ...current, away: value }))} />
+              </div>
+
+              {manualOddsAnalysis ? (
+                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                  <Info label="Bookmaker margin" value={manualOddsAnalysis.margin + '%'} />
+                  <Info label="No-vig Team A" value={manualOddsAnalysis.normalized.home + '%'} />
+                  <Info label="No-vig draw" value={manualOddsAnalysis.normalized.draw + '%'} />
+                  <Info label="No-vig Team B" value={manualOddsAnalysis.normalized.away + '%'} />
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-slate-500">No odds supplied yet. Prediction still works, but the market signal is treated as neutral.</p>
+              )}
+            </div>
 
             <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-wrap gap-2">
@@ -185,6 +258,20 @@ export default function Predict() {
                   </div>
                 </div>
               </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+                <h3 className="text-xl font-bold text-white">Odds interpretation and data basis</h3>
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <Info label="Odds source" value={oddsReady ? 'Manual/API decimal odds' : 'Neutral placeholder'} />
+                  <Info label="Market margin" value={result.model_breakdown.odds.margin == null ? 'N/A' : result.model_breakdown.odds.margin + '%'} />
+                  <Info label="Market read" value={result.model_breakdown.odds.interpretation} />
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  <Explanation title="1. Implied probability" text="Decimal odds are converted with 1 / odds. Lower odds mean the market is pricing that outcome as more likely." />
+                  <Explanation title="2. Overround removal" text="Bookmakers include margin, so raw implied probabilities usually add to more than 100%. The model normalizes them into no-vig probabilities." />
+                  <Explanation title="3. Ensemble fusion" text="Odds are combined with Poisson scorelines, Elo strength, and qualitative context such as injuries, team state, coach style, referee tendency, and H2H history." />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -207,6 +294,52 @@ function TeamSelect({ label, value, onChange, teams }) {
           <option key={team.id} value={team.name}>{team.flag} {team.name} - Group {team.group}</option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function TeamCard({ title, team }) {
+  if (!team) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-slate-900 p-5">
+        <div className="text-sm font-semibold text-slate-500">{title}</div>
+        <div className="mt-4 text-slate-400">Select a country to show flag, group, confederation, and rating.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-slate-900 p-5">
+      <div className="text-sm font-semibold text-slate-500">{title}</div>
+      <div className="mt-4 flex items-center gap-4">
+        <div className="text-6xl leading-none">{team.flag}</div>
+        <div>
+          <div className="text-xl font-bold text-white">{team.name}</div>
+          <div className="text-sm text-slate-400">{team.id}</div>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+        <Info label="Group" value={team.group} />
+        <Info label="Confederation" value={team.confederation} />
+        <Info label="Elo" value={team.elo} />
+      </div>
+    </div>
+  );
+}
+
+function OddsInput({ label, value, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-300">{label} odds</span>
+      <input
+        type="number"
+        min="1.01"
+        step="0.01"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="2.50"
+        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+      />
     </label>
   );
 }
@@ -238,7 +371,17 @@ function ModelPanel({ title, data }) {
         <InfoRow label="Draw" value={data.draw + '%'} />
         <InfoRow label="Away" value={data.away + '%'} />
       </div>
-      {data.interpretation && <p className="mt-3 text-xs text-slate-500">{data.interpretation}</p>}
+      {data.margin != null && <p className="mt-3 text-xs text-slate-500">Margin: {data.margin}%</p>}
+      {data.interpretation && <p className="mt-1 text-xs text-slate-500">{data.interpretation}</p>}
+    </div>
+  );
+}
+
+function Explanation({ title, text }) {
+  return (
+    <div className="rounded-md bg-slate-900 p-4">
+      <div className="font-bold text-white">{title}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
     </div>
   );
 }
@@ -261,6 +404,23 @@ function InfoRow({ label, value }) {
   );
 }
 
+function analyzeOdds(home, draw, away) {
+  const raw = {
+    home: 1 / home,
+    draw: 1 / draw,
+    away: 1 / away,
+  };
+  const total = raw.home + raw.draw + raw.away;
+  return {
+    margin: round((total - 1) * 100),
+    normalized: {
+      home: round((raw.home / total) * 100),
+      draw: round((raw.draw / total) * 100),
+      away: round((raw.away / total) * 100),
+    },
+  };
+}
+
 function inferHostTeam(stadium) {
   if (/Mexico|Guadalajara|Monterrey|Azteca|Akron|BBVA/.test(stadium)) return 'MEX';
   if (/Toronto|Vancouver|BMO|BC Place/.test(stadium)) return 'CAN';
@@ -274,4 +434,12 @@ function formatDate(dateStr) {
     day: 'numeric',
     weekday: 'short',
   });
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
 }
