@@ -4,24 +4,24 @@ import Layout from '../components/Layout';
 
 const features = [
   {
-    title: 'Match probabilities',
-    body: 'Compare two national teams and get home win, draw, and away win probabilities from an ensemble model.',
+    title: 'Transparent probabilities',
+    body: 'Compare national teams and inspect win, draw, scoreline, and confidence outputs without black-box claims.',
   },
   {
-    title: 'Group schedule',
-    body: 'Browse all twelve groups, fixture dates, kickoff times, and stadiums from one clean screen.',
+    title: 'Odds-first analytics',
+    body: 'Use bookmaker odds as the key market signal, then normalize implied probabilities and show the margin.',
   },
   {
-    title: 'Model breakdown',
-    body: 'See how Elo ratings, Poisson goal modelling, and optional odds inputs shape the final forecast.',
+    title: 'API-ready framework',
+    body: 'Prepare Gemini, ChatGPT, DeepSeek, Odds API, API-Football, and Football-Data integrations for deeper tiers.',
   },
 ];
 
 const modelCards = [
-  ['Elo rating', 'Team strength baseline'],
-  ['Poisson goals', 'Likely scorelines'],
-  ['Odds analysis', 'Market signal when supplied'],
-  ['Venue factor', 'Host-country context'],
+  ['Free core', 'Elo + Poisson + fixtures'],
+  ['Pro layer', 'Odds and handicap analysis'],
+  ['Analyst layer', 'API-backed data refresh'],
+  ['Business layer', 'Reports and white-label workflows'],
 ];
 
 export default function Home() {
@@ -31,7 +31,7 @@ export default function Home() {
         <title>World Cup AI Predictor</title>
         <meta
           name="description"
-          content="World Cup 2026 match, group-stage, and champion probability forecasts powered by ensemble football models."
+          content="World Cup 2026 football analytics platform with match, odds, group-stage, and champion probability tools."
         />
       </Head>
 
@@ -39,37 +39,38 @@ export default function Home() {
         <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.05fr_0.95fr] md:items-center">
           <div>
             <div className="mb-5 inline-flex rounded-md border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-200">
-              World Cup 2026 forecasting workspace
+              Football analytics for World Cup 2026
             </div>
             <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-normal text-white md:text-6xl">
-              Turn fixtures into clear football probabilities.
+              Build trust with clear football probabilities.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              Pick teams, review group fixtures, and inspect transparent model outputs before the World Cup begins.
+              Explore fixtures, odds signals, model outputs, and report-ready analysis. Free users get the core model; advanced data belongs in paid tiers.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/predict" className="rounded-md bg-emerald-400 px-6 py-3 text-center font-bold text-slate-950 transition hover:bg-emerald-300">
-                Start Prediction
+              <Link href="/register" className="rounded-md bg-emerald-400 px-6 py-3 text-center font-bold text-slate-950 transition hover:bg-emerald-300">
+                Create free account
               </Link>
-              <Link href="/groupstage" className="rounded-md border border-white/20 px-6 py-3 text-center font-bold text-white transition hover:bg-white/10">
-                View Group Stage
+              <Link href="/pricing" className="rounded-md border border-white/20 px-6 py-3 text-center font-bold text-white transition hover:bg-white/10">
+                View pricing plan
               </Link>
             </div>
+            <p className="mt-5 text-sm text-slate-500">18+ only. Analytics and research, not betting advice.</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-white/5 p-5 shadow-2xl shadow-black/30 backdrop-blur">
             <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
               <div>
-                <p className="text-sm text-slate-400">Featured simulation</p>
-                <h2 className="text-2xl font-bold text-white">Brazil vs France</h2>
+                <p className="text-sm text-slate-400">Commercial product map</p>
+                <h2 className="text-2xl font-bold text-white">Open core, paid intelligence</h2>
               </div>
-              <span className="rounded-md bg-emerald-400/15 px-3 py-2 text-sm font-bold text-emerald-200">Neutral</span>
+              <span className="rounded-md bg-emerald-400/15 px-3 py-2 text-sm font-bold text-emerald-200">SaaS-ready</span>
             </div>
             <div className="space-y-4">
               {[
-                ['Brazil win', '37%', 'bg-emerald-400'],
-                ['Draw', '27%', 'bg-amber-300'],
-                ['France win', '36%', 'bg-sky-400'],
+                ['Free public value', '65%', 'bg-emerald-400'],
+                ['Pro analytics upside', '25%', 'bg-amber-300'],
+                ['Business customization', '10%', 'bg-sky-400'],
               ].map(([label, value, color]) => (
                 <div key={label}>
                   <div className="mb-2 flex justify-between text-sm">
@@ -98,11 +99,11 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col justify-between gap-3 md:flex-row md:items-end">
             <div>
-              <h2 className="text-3xl font-bold text-white">What you can do</h2>
-              <p className="mt-2 text-slate-400">A focused set of tools for exploring the tournament.</p>
+              <h2 className="text-3xl font-bold text-white">What the platform should become</h2>
+              <p className="mt-2 text-slate-400">A focused product path from public demo to paid analytics.</p>
             </div>
-            <Link href="/champion" className="text-sm font-bold text-emerald-300 hover:text-emerald-200">
-              Open champion forecast
+            <Link href="/settings" className="text-sm font-bold text-emerald-300 hover:text-emerald-200">
+              Configure data sources
             </Link>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
