@@ -1,5 +1,3 @@
-import { WORLD_CUP_2026_TEAMS } from '../../lib/predictor';
-
 const flagCodeMap = {
   MEX: 'mx',
   ZAF: 'za',
@@ -51,24 +49,26 @@ const flagCodeMap = {
   PAN: 'pa',
 };
 
-const toPublicTeam = (team) => {
-  const { name_cn, ...publicTeam } = team;
-  return {
-    ...publicTeam,
-    flag_code: flagCodeMap[team.id],
-  };
-};
+export { flagCodeMap };
 
-export default function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.status(405).json({ message: 'Method not allowed' });
-    return;
+export default function Flag({ team, className = '' }) {
+  const code = team?.flag_code || flagCodeMap[team?.id];
+
+  if (!team || !code) {
+    return (
+      <div className={`grid place-items-center rounded-md bg-slate-800 font-bold text-slate-300 ${className}`}>
+        --
+      </div>
+    );
   }
 
-  const { group } = req.query;
-  const teams = group
-    ? WORLD_CUP_2026_TEAMS.filter((team) => team.group === group.toUpperCase())
-    : WORLD_CUP_2026_TEAMS;
-
-  res.status(200).json(teams.map(toPublicTeam));
+  return (
+    <img
+      src={`https://flagcdn.com/w160/${code}.png`}
+      srcSet={`https://flagcdn.com/w80/${code}.png 1x, https://flagcdn.com/w160/${code}.png 2x`}
+      alt={`${team.name} flag`}
+      className={`rounded-md object-cover shadow-sm ring-1 ring-white/10 ${className}`}
+      loading="lazy"
+    />
+  );
 }

@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import Flag from '../components/Flag';
 import Layout from '../components/Layout';
 import { GROUP_STAGES } from '../lib/predictor';
 
@@ -9,6 +11,7 @@ const venueOptions = [
 ];
 
 const emptyOdds = { home: '', draw: '', away: '' };
+const apiProviderLabels = ['gemini', 'chatgpt', 'deepseek', 'oddsApi', 'apiFootball', 'footballData'];
 
 export default function Predict() {
   const [teams, setTeams] = useState([]);
@@ -16,6 +19,7 @@ export default function Predict() {
   const [awayTeam, setAwayTeam] = useState('');
   const [venue, setVenue] = useState('neutral');
   const [odds, setOdds] = useState(emptyOdds);
+  const [apiKeys, setApiKeys] = useState({});
   const [matchInfo, setMatchInfo] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -26,6 +30,12 @@ export default function Predict() {
       .then((res) => res.json())
       .then(setTeams)
       .catch(() => setError('Could not load team data.'));
+
+    try {
+      setApiKeys(JSON.parse(localStorage.getItem('apiKeys') || '{}'));
+    } catch {
+      setApiKeys({});
+    }
   }, []);
 
   const selected = useMemo(() => ({
@@ -127,7 +137,9 @@ export default function Predict() {
             </p>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-8">
+          <ApiStatus apiKeys={apiKeys} />
+
+          <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-8">
             <div className="grid gap-5 md:grid-cols-[1fr_auto_1fr] md:items-end">
               <TeamSelect label="Team A" value={homeTeam} onChange={setHomeTeam} teams={teams} />
               <div className="pb-3 text-center text-2xl font-black text-slate-500">VS</div>
@@ -280,6 +292,34 @@ export default function Predict() {
   );
 }
 
+function ApiStatus({ apiKeys }) {
+  return (
+    <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Data & API status</h2>
+          <p className="mt-2 text-sm leading-6 text-emerald-50/80">
+            Accuracy improves when odds, fixture, injury, H2H, and news APIs are connected. Configure keys before relying on live market analysis.
+          </p>
+        </div>
+        <Link href="/settings" className="rounded-md bg-white px-4 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-emerald-200">
+          Configure API keys
+        </Link>
+      </div>
+      <div className="mt-4 grid gap-2 md:grid-cols-6">
+        {apiProviderLabels.map((key) => (
+          <div key={key} className="rounded-md bg-slate-950/50 px-3 py-2 text-xs">
+            <div className="font-bold uppercase tracking-wide text-slate-400">{formatProvider(key)}</div>
+            <div className={apiKeys[key] ? 'mt-1 font-bold text-emerald-300' : 'mt-1 font-bold text-amber-200'}>
+              {apiKeys[key] ? 'Connected' : 'Not set'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TeamSelect({ label, value, onChange, teams }) {
   return (
     <label className="block">
@@ -291,7 +331,7 @@ function TeamSelect({ label, value, onChange, teams }) {
       >
         <option value="">Select team...</option>
         {teams.map((team) => (
-          <option key={team.id} value={team.name}>{team.flag} {team.name} - Group {team.group}</option>
+          <option key={team.id} value={team.name}>{team.id} {team.name} - Group {team.group}</option>
         ))}
       </select>
     </label>
@@ -312,7 +352,7 @@ function TeamCard({ title, team }) {
     <div className="rounded-lg border border-white/10 bg-slate-900 p-5">
       <div className="text-sm font-semibold text-slate-500">{title}</div>
       <div className="mt-4 flex items-center gap-4">
-        <div className="text-6xl leading-none">{team.flag}</div>
+        <Flag team={team} className="h-16 w-24" />
         <div>
           <div className="text-xl font-bold text-white">{team.name}</div>
           <div className="text-sm text-slate-400">{team.id}</div>
@@ -434,6 +474,17 @@ function formatDate(dateStr) {
     day: 'numeric',
     weekday: 'short',
   });
+}
+
+function formatProvider(key) {
+  return {
+    gemini: 'Gemini',
+    chatgpt: 'ChatGPT',
+    deepseek: 'DeepSeek',
+    oddsApi: 'Odds API',
+    apiFootball: 'API-Football',
+    footballData: 'Football-Data',
+  }[key];
 }
 
 function clamp(value, min, max) {
