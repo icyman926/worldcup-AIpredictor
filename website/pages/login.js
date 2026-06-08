@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
+import { setAuthSession } from '../lib/auth-client';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,20 +13,25 @@ export default function Login() {
     event.preventDefault();
     setError('');
 
-    const savedUser = localStorage.getItem('user');
-    if (!savedUser) {
+    let user = null;
+    try {
+      user = JSON.parse(localStorage.getItem('wc_user') || localStorage.getItem('user') || 'null');
+    } catch {
+      user = null;
+    }
+
+    if (!user) {
       setError('No local account found. Register first on this browser.');
       return;
     }
 
-    const user = JSON.parse(savedUser);
-    if (user.email === email && user.password === password) {
-      localStorage.setItem('isLoggedIn', 'true');
-      router.push('/');
+    if (user.email === email && user.password === password && user.ageVerified) {
+      setAuthSession(user);
+      router.push(router.query.next || '/predict');
       return;
     }
 
-    setError('Invalid email or password.');
+    setError('Invalid email, password, or 18+ access status.');
   };
 
   return (
@@ -33,8 +39,9 @@ export default function Login() {
       <div className="min-h-screen bg-slate-950 px-4 py-10">
         <div className="mx-auto max-w-md">
           <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-white">Welcome back</h1>
-            <p className="mt-3 text-slate-400">Sign in to your local prediction workspace.</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Member workspace</p>
+            <h1 className="mt-3 text-4xl font-bold text-white">Welcome back</h1>
+            <p className="mt-3 text-slate-400">Sign in with email and password to open the full analytics interface.</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">

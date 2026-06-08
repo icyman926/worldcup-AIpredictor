@@ -22,31 +22,31 @@ const providers = [
     key: 'gemini',
     name: 'Google Gemini',
     prefix: 'AIza...',
-    role: 'Real-time news, injuries, locker-room sentiment, political and commercial context.',
+    role: 'Live qualitative context: injuries, squad depth, team dynamics, political/commercial uncertainty, and report notes.',
   },
   {
     key: 'chatgpt',
     name: 'OpenAI ChatGPT',
     prefix: 'sk-proj-...',
-    role: 'Structured reasoning, model explanation, scenario analysis, and report generation.',
+    role: 'Structured reasoning, scenario explanation, model audit notes, and report generation.',
   },
   {
     key: 'deepseek',
     name: 'DeepSeek',
     prefix: 'sk-...',
-    role: 'Low-cost reasoning for odds movement notes and market interpretation.',
+    role: 'Low-cost reasoning for odds movement notes, market interpretation, and secondary context checks.',
   },
   {
     key: 'oddsApi',
     name: 'The Odds API',
     prefix: 'odds...',
-    role: 'Bookmaker decimal odds, implied probability, overround, and market direction.',
+    role: 'Bookmaker decimal odds, implied probability, overround, and market direction checks.',
   },
   {
     key: 'apiFootball',
     name: 'API-Football',
     prefix: 'rapidapi...',
-    role: 'Fixtures, squads, injuries, H2H, standings, and match events.',
+    role: 'Fixtures, squads, injuries, H2H, standings, and match-event data.',
   },
   {
     key: 'footballData',
@@ -60,6 +60,7 @@ export default function Settings() {
   const [weights, setWeights] = useState(weightDefaults);
   const [apiKeys, setApiKeys] = useState(apiDefaults);
   const [saveStatus, setSaveStatus] = useState('');
+  const [testStatus, setTestStatus] = useState({});
 
   useEffect(() => {
     const savedWeights = localStorage.getItem('modelSettings');
@@ -90,6 +91,33 @@ export default function Settings() {
     setApiKeys((current) => ({ ...current, [key]: value }));
   };
 
+  const testProvider = async (provider) => {
+    const key = apiKeys[provider];
+    if (!key) {
+      setTestStatus((current) => ({ ...current, [provider]: { ok: false, text: 'Missing key' } }));
+      return;
+    }
+
+    setTestStatus((current) => ({ ...current, [provider]: { ok: null, text: 'Testing...' } }));
+    try {
+      const response = await fetch('/api/integrations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, apiKey: key }),
+      });
+      const data = await response.json();
+      setTestStatus((current) => ({
+        ...current,
+        [provider]: {
+          ok: Boolean(data.ok),
+          text: data.ok ? data.detail : data.error,
+        },
+      }));
+    } catch (error) {
+      setTestStatus((current) => ({ ...current, [provider]: { ok: false, text: error.message } }));
+    }
+  };
+
   const save = () => {
     localStorage.setItem('modelSettings', JSON.stringify(weights));
     localStorage.setItem('apiKeys', JSON.stringify(apiKeys));
@@ -107,7 +135,7 @@ export default function Settings() {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">API & model settings</p>
             <h1 className="mt-3 text-4xl font-bold text-white">Data source control center</h1>
             <p className="mt-3 max-w-3xl text-slate-400">
-              Connect LLM and football data providers for the full framework: odds analysis, big-data fixtures, team dynamics, injuries, H2H history, and market interpretation.
+              Connect LLM and football data providers for the full framework. This is football analytics and probability research only, not betting advice.
             </p>
           </div>
 
@@ -116,7 +144,7 @@ export default function Settings() {
               <div>
                 <h2 className="text-2xl font-bold text-white">API access</h2>
                 <p className="mt-2 text-sm text-slate-400">
-                  Keys are stored in this browser only. A production backend should move them to Railway or Vercel environment variables before live API calls.
+                  Early MVP keys are stored in this browser. Production should move platform-owned keys to server environment variables.
                 </p>
               </div>
               <span className="rounded-md bg-slate-900 px-3 py-2 text-sm font-bold text-emerald-300">
@@ -126,27 +154,14 @@ export default function Settings() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               {providers.map((provider) => (
-                <div key={provider.key} className="rounded-lg border border-white/10 bg-slate-900 p-4">
-                  <div className="mb-3 flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-bold text-white">{provider.name}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-400">{provider.role}</p>
-                    </div>
-                    <span className={`rounded-md px-2 py-1 text-xs font-bold ${apiKeys[provider.key] ? 'bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                      {apiKeys[provider.key] ? 'Ready' : 'Optional'}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <input
-                      type="password"
-                      value={apiKeys[provider.key]}
-                      onChange={(event) => updateApiKey(provider.key, event.target.value)}
-                      placeholder={`Paste ${provider.name} key`}
-                      className="min-w-0 flex-1 rounded-md border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400"
-                    />
-                    <span className="text-xs text-slate-500 sm:w-24 sm:text-right">{provider.prefix}</span>
-                  </div>
-                </div>
+                <ProviderCard
+                  key={provider.key}
+                  provider={provider}
+                  value={apiKeys[provider.key]}
+                  status={testStatus[provider.key]}
+                  onChange={(value) => updateApiKey(provider.key, value)}
+                  onTest={() => testProvider(provider.key)}
+                />
               ))}
             </div>
           </section>
@@ -154,7 +169,7 @@ export default function Settings() {
           <section className="mt-6 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-6">
             <h2 className="text-2xl font-bold text-white">Model weights</h2>
             <p className="mt-2 text-sm text-slate-400">
-              Odds stays highest because bookmaker prices encode professional analysis and capital flow. Poisson and Elo provide model discipline when live APIs are missing.
+              Odds remains the strongest market signal. Poisson, Elo, and qualitative context keep the model explainable when live data is incomplete.
             </p>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -183,7 +198,9 @@ export default function Settings() {
           <div className="mt-6 flex flex-col gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="font-bold text-white">Total configured model weight: {Object.values(weights).reduce((sum, value) => sum + value, 0)}%</div>
-              <div className="mt-1 text-sm text-slate-400">Current API keys are for interface readiness; live external calls can be added through backend routes next.</div>
+              <div className="mt-1 text-sm text-slate-400">
+                Test buttons call real provider endpoints. Gemini, OpenAI, and DeepSeek context is passed into match predictions when configured.
+              </div>
             </div>
             <button onClick={save} className="rounded-md bg-white px-5 py-3 font-bold text-slate-950 transition hover:bg-emerald-200">
               {saveStatus || 'Save API keys and weights'}
@@ -195,12 +212,59 @@ export default function Settings() {
   );
 }
 
+function ProviderCard({ provider, value, status, onChange, onTest }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-slate-900 p-4">
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-bold text-white">{provider.name}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-400">{provider.role}</p>
+        </div>
+        <span className={value ? 'rounded-md bg-emerald-400 px-2 py-1 text-xs font-bold text-slate-950' : 'rounded-md bg-slate-800 px-2 py-1 text-xs font-bold text-slate-400'}>
+          {value ? 'Ready' : 'Optional'}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          type="password"
+          value={value || ''}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={'Paste ' + provider.name + ' key'}
+          className="min-w-0 flex-1 rounded-md border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+        />
+        <button
+          type="button"
+          onClick={onTest}
+          className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10"
+        >
+          Test
+        </button>
+        <span className="text-xs text-slate-500 sm:w-24 sm:text-right">{provider.prefix}</span>
+      </div>
+
+      {status && (
+        <div className={statusClass(status)}>
+          {status.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function statusClass(status) {
+  const base = 'mt-3 rounded-md border p-3 text-xs ';
+  if (status.ok === true) return base + 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100';
+  if (status.ok === null) return base + 'border-sky-400/30 bg-sky-400/10 text-sky-100';
+  return base + 'border-red-400/30 bg-red-400/10 text-red-100';
+}
+
 function describeWeight(key) {
   const copy = {
     odds: 'Bookmaker implied probability, overround removal, odds drift, and capital-flow signal.',
     poisson: 'Expected-goals and scoreline distribution model.',
     elo: 'Long-run team strength from rating differences.',
-    qualitative: 'Injuries, locker-room state, coach style, referee tendency, H2H, and broader context.',
+    qualitative: 'Injuries, locker-room state, coach style, referee tendency, H2H, and broader context from connected LLMs/APIs.',
   };
   return copy[key] || '';
 }
