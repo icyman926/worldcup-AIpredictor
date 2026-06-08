@@ -1,63 +1,63 @@
 const WORLD_CUP_2026_TEAMS = [
-  { id: 'MEX', name: 'Mexico', name_cn: '墨西哥', flag: '🇲🇽', confederation: 'CONCACAF', group: 'A', elo: 1865, pot: 1 },
-  { id: 'ZAF', name: 'South Africa', name_cn: '南非', flag: '🇿🇦', confederation: 'CAF', group: 'A', elo: 1760, pot: 2 },
-  { id: 'KOR', name: 'South Korea', name_cn: '韩国', flag: '🇰🇷', confederation: 'AFC', group: 'A', elo: 1825, pot: 3 },
-  { id: 'CZE', name: 'Czech Republic', name_cn: '捷克', flag: '🇨🇿', confederation: 'UEFA', group: 'A', elo: 1830, pot: 4 },
+  { id: 'MEX', name: 'Mexico', name_cn: '墨西哥', flag: '🇲🇽', confederation: 'CONCACAF', group: 'A', elo: 1862, pot: 1 },
+  { id: 'ZAF', name: 'South Africa', name_cn: '南非', flag: '🇿🇦', confederation: 'CAF', group: 'A', elo: 1772, pot: 2 },
+  { id: 'KOR', name: 'South Korea', name_cn: '韩国', flag: '🇰🇷', confederation: 'AFC', group: 'A', elo: 1828, pot: 3 },
+  { id: 'CZE', name: 'Czech Republic', name_cn: '捷克', flag: '🇨🇿', confederation: 'UEFA', group: 'A', elo: 1842, pot: 4 },
   
-  { id: 'CAN', name: 'Canada', name_cn: '加拿大', flag: '🇨🇦', confederation: 'CONCACAF', group: 'B', elo: 1790, pot: 1 },
-  { id: 'BOS', name: 'Bosnia and Herzegovina', name_cn: '波黑', flag: '🇧🇦', confederation: 'UEFA', group: 'B', elo: 1800, pot: 2 },
-  { id: 'QAT', name: 'Qatar', name_cn: '卡塔尔', flag: '🇶🇦', confederation: 'AFC', group: 'B', elo: 1785, pot: 3 },
-  { id: 'SUI', name: 'Switzerland', name_cn: '瑞士', flag: '🇨🇭', confederation: 'UEFA', group: 'B', elo: 1905, pot: 4 },
+  { id: 'CAN', name: 'Canada', name_cn: '加拿大', flag: '🇨🇦', confederation: 'CONCACAF', group: 'B', elo: 1788, pot: 1 },
+  { id: 'BOS', name: 'Bosnia and Herzegovina', name_cn: '波黑', flag: '🇧🇦', confederation: 'UEFA', group: 'B', elo: 1794, pot: 2 },
+  { id: 'QAT', name: 'Qatar', name_cn: '卡塔尔', flag: '🇶🇦', confederation: 'AFC', group: 'B', elo: 1798, pot: 3 },
+  { id: 'SUI', name: 'Switzerland', name_cn: '瑞士', flag: '🇨🇭', confederation: 'UEFA', group: 'B', elo: 1882, pot: 4 },
   
-  { id: 'BRA', name: 'Brazil', name_cn: '巴西', flag: '🇧🇷', confederation: 'CONMEBOL', group: 'C', elo: 2027, pot: 1 },
-  { id: 'MAR', name: 'Morocco', name_cn: '摩洛哥', flag: '🇲🇦', confederation: 'CAF', group: 'C', elo: 1810, pot: 2 },
-  { id: 'HAI', name: 'Haiti', name_cn: '海地', flag: '🇭🇹', confederation: 'CONCACAF', group: 'C', elo: 1755, pot: 3 },
+  { id: 'BRA', name: 'Brazil', name_cn: '巴西', flag: '🇧🇷', confederation: 'CONMEBOL', group: 'C', elo: 1978, pot: 1 },
+  { id: 'MAR', name: 'Morocco', name_cn: '摩洛哥', flag: '🇲🇦', confederation: 'CAF', group: 'C', elo: 1888, pot: 2 },
+  { id: 'HAI', name: 'Haiti', name_cn: '海地', flag: '🇭🇹', confederation: 'CONCACAF', group: 'C', elo: 1756, pot: 3 },
   { id: 'SCO', name: 'Scotland', name_cn: '苏格兰', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', confederation: 'UEFA', group: 'C', elo: 1820, pot: 4 },
   
-  { id: 'USA', name: 'United States', name_cn: '美国', flag: '🇺🇸', confederation: 'CONCACAF', group: 'D', elo: 1870, pot: 1 },
-  { id: 'PAR', name: 'Paraguay', name_cn: '巴拉圭', flag: '🇵🇾', confederation: 'CONMEBOL', group: 'D', elo: 1785, pot: 2 },
-  { id: 'AUS', name: 'Australia', name_cn: '澳大利亚', flag: '🇦🇺', confederation: 'AFC', group: 'D', elo: 1775, pot: 3 },
-  { id: 'TUR', name: 'Turkey', name_cn: '土耳其', flag: '🇹🇷', confederation: 'UEFA', group: 'D', elo: 1855, pot: 4 },
+  { id: 'USA', name: 'United States', name_cn: '美国', flag: '🇺🇸', confederation: 'CONCACAF', group: 'D', elo: 1826, pot: 1 },
+  { id: 'PAR', name: 'Paraguay', name_cn: '巴拉圭', flag: '🇵🇾', confederation: 'CONMEBOL', group: 'D', elo: 1818, pot: 2 },
+  { id: 'AUS', name: 'Australia', name_cn: '澳大利亚', flag: '🇦🇺', confederation: 'AFC', group: 'D', elo: 1806, pot: 3 },
+  { id: 'TUR', name: 'Turkey', name_cn: '土耳其', flag: '🇹🇷', confederation: 'UEFA', group: 'D', elo: 1858, pot: 4 },
   
-  { id: 'GER', name: 'Germany', name_cn: '德国', flag: '🇩🇪', confederation: 'UEFA', group: 'E', elo: 1940, pot: 1 },
-  { id: 'CUR', name: 'Curacao', name_cn: '库拉索', flag: '🇨🇼', confederation: 'CONCACAF', group: 'E', elo: 1740, pot: 2 },
-  { id: 'CIV', name: "Cote d'Ivoire", name_cn: '科特迪瓦', flag: '🇨🇮', confederation: 'CAF', group: 'E', elo: 1795, pot: 3 },
-  { id: 'ECU', name: 'Ecuador', name_cn: '厄瓜多尔', flag: '🇪🇨', confederation: 'CONMEBOL', group: 'E', elo: 1785, pot: 4 },
+  { id: 'GER', name: 'Germany', name_cn: '德国', flag: '🇩🇪', confederation: 'UEFA', group: 'E', elo: 1950, pot: 1 },
+  { id: 'CUR', name: 'Curacao', name_cn: '库拉索', flag: '🇨🇼', confederation: 'CONCACAF', group: 'E', elo: 1744, pot: 2 },
+  { id: 'CIV', name: "Cote d'Ivoire", name_cn: '科特迪瓦', flag: '🇨🇮', confederation: 'CAF', group: 'E', elo: 1814, pot: 3 },
+  { id: 'ECU', name: 'Ecuador', name_cn: '厄瓜多尔', flag: '🇪🇨', confederation: 'CONMEBOL', group: 'E', elo: 1820, pot: 4 },
   
-  { id: 'NED', name: 'Netherlands', name_cn: '荷兰', flag: '🇳🇱', confederation: 'UEFA', group: 'F', elo: 1935, pot: 1 },
-  { id: 'JPN', name: 'Japan', name_cn: '日本', flag: '🇯🇵', confederation: 'AFC', group: 'F', elo: 1830, pot: 2 },
-  { id: 'SWE', name: 'Sweden', name_cn: '瑞典', flag: '🇸🇪', confederation: 'UEFA', group: 'F', elo: 1845, pot: 3 },
-  { id: 'TUN', name: 'Tunisia', name_cn: '突尼斯', flag: '🇹🇳', confederation: 'CAF', group: 'F', elo: 1770, pot: 4 },
+  { id: 'NED', name: 'Netherlands', name_cn: '荷兰', flag: '🇳🇱', confederation: 'UEFA', group: 'F', elo: 1958, pot: 1 },
+  { id: 'JPN', name: 'Japan', name_cn: '日本', flag: '🇯🇵', confederation: 'AFC', group: 'F', elo: 1852, pot: 2 },
+  { id: 'SWE', name: 'Sweden', name_cn: '瑞典', flag: '🇸🇪', confederation: 'UEFA', group: 'F', elo: 1838, pot: 3 },
+  { id: 'TUN', name: 'Tunisia', name_cn: '突尼斯', flag: '🇹🇳', confederation: 'CAF', group: 'F', elo: 1778, pot: 4 },
   
-  { id: 'BEL', name: 'Belgium', name_cn: '比利时', flag: '🇧🇪', confederation: 'UEFA', group: 'G', elo: 1955, pot: 1 },
-  { id: 'EGY', name: 'Egypt', name_cn: '埃及', flag: '🇪🇬', confederation: 'CAF', group: 'G', elo: 1790, pot: 2 },
-  { id: 'IRN', name: 'Iran', name_cn: '伊朗', flag: '🇮🇷', confederation: 'AFC', group: 'G', elo: 1805, pot: 3 },
+  { id: 'BEL', name: 'Belgium', name_cn: '比利时', flag: '🇧🇪', confederation: 'UEFA', group: 'G', elo: 1932, pot: 1 },
+  { id: 'EGY', name: 'Egypt', name_cn: '埃及', flag: '🇪🇬', confederation: 'CAF', group: 'G', elo: 1796, pot: 2 },
+  { id: 'IRN', name: 'Iran', name_cn: '伊朗', flag: '🇮🇷', confederation: 'AFC', group: 'G', elo: 1812, pot: 3 },
   { id: 'NZL', name: 'New Zealand', name_cn: '新西兰', flag: '🇳🇿', confederation: 'OFC', group: 'G', elo: 1750, pot: 4 },
   
-  { id: 'ESP', name: 'Spain', name_cn: '西班牙', flag: '🇪🇸', confederation: 'UEFA', group: 'H', elo: 1995, pot: 1 },
-  { id: 'CPV', name: 'Cape Verde', name_cn: '维德角', flag: '🇨🇻', confederation: 'CAF', group: 'H', elo: 1765, pot: 2 },
-  { id: 'SAU', name: 'Saudi Arabia', name_cn: '沙特阿拉伯', flag: '🇸🇦', confederation: 'AFC', group: 'H', elo: 1755, pot: 3 },
-  { id: 'URU', name: 'Uruguay', name_cn: '乌拉圭', flag: '🇺🇾', confederation: 'CONMEBOL', group: 'H', elo: 1910, pot: 4 },
+  { id: 'ESP', name: 'Spain', name_cn: '西班牙', flag: '🇪🇸', confederation: 'UEFA', group: 'H', elo: 2048, pot: 1 },
+  { id: 'CPV', name: 'Cape Verde', name_cn: '维德角', flag: '🇨🇻', confederation: 'CAF', group: 'H', elo: 1760, pot: 2 },
+  { id: 'SAU', name: 'Saudi Arabia', name_cn: '沙特阿拉伯', flag: '🇸🇦', confederation: 'AFC', group: 'H', elo: 1754, pot: 3 },
+  { id: 'URU', name: 'Uruguay', name_cn: '乌拉圭', flag: '🇺🇾', confederation: 'CONMEBOL', group: 'H', elo: 1896, pot: 4 },
   
-  { id: 'FRA', name: 'France', name_cn: '法国', flag: '🇫🇷', confederation: 'UEFA', group: 'I', elo: 2015, pot: 1 },
-  { id: 'SEN', name: 'Senegal', name_cn: '塞内加尔', flag: '🇸🇳', confederation: 'CAF', group: 'I', elo: 1800, pot: 2 },
-  { id: 'IRQ', name: 'Iraq', name_cn: '伊拉克', flag: '🇮🇶', confederation: 'AFC', group: 'I', elo: 1775, pot: 3 },
-  { id: 'NOR', name: 'Norway', name_cn: '挪威', flag: '🇳🇴', confederation: 'UEFA', group: 'I', elo: 1850, pot: 4 },
+  { id: 'FRA', name: 'France', name_cn: '法国', flag: '🇫🇷', confederation: 'UEFA', group: 'I', elo: 2050, pot: 1 },
+  { id: 'SEN', name: 'Senegal', name_cn: '塞内加尔', flag: '🇸🇳', confederation: 'CAF', group: 'I', elo: 1824, pot: 2 },
+  { id: 'IRQ', name: 'Iraq', name_cn: '伊拉克', flag: '🇮🇶', confederation: 'AFC', group: 'I', elo: 1776, pot: 3 },
+  { id: 'NOR', name: 'Norway', name_cn: '挪威', flag: '🇳🇴', confederation: 'UEFA', group: 'I', elo: 1920, pot: 4 },
   
-  { id: 'ARG', name: 'Argentina', name_cn: '阿根廷', flag: '🇦🇷', confederation: 'CONMEBOL', group: 'J', elo: 1980, pot: 1 },
-  { id: 'ALG', name: 'Algeria', name_cn: '阿尔及利亚', flag: '🇩🇿', confederation: 'CAF', group: 'J', elo: 1780, pot: 2 },
-  { id: 'AUT', name: 'Austria', name_cn: '奥地利', flag: '🇦🇹', confederation: 'UEFA', group: 'J', elo: 1855, pot: 3 },
-  { id: 'JOR', name: 'Jordan', name_cn: '约旦', flag: '🇯🇴', confederation: 'AFC', group: 'J', elo: 1760, pot: 4 },
+  { id: 'ARG', name: 'Argentina', name_cn: '阿根廷', flag: '🇦🇷', confederation: 'CONMEBOL', group: 'J', elo: 2010, pot: 1 },
+  { id: 'ALG', name: 'Algeria', name_cn: '阿尔及利亚', flag: '🇩🇿', confederation: 'CAF', group: 'J', elo: 1792, pot: 2 },
+  { id: 'AUT', name: 'Austria', name_cn: '奥地利', flag: '🇦🇹', confederation: 'UEFA', group: 'J', elo: 1860, pot: 3 },
+  { id: 'JOR', name: 'Jordan', name_cn: '约旦', flag: '🇯🇴', confederation: 'AFC', group: 'J', elo: 1762, pot: 4 },
   
-  { id: 'POR', name: 'Portugal', name_cn: '葡萄牙', flag: '🇵🇹', confederation: 'UEFA', group: 'K', elo: 1925, pot: 1 },
-  { id: 'COD', name: 'DR Congo', name_cn: '刚果民主共和国', flag: '🇨🇩', confederation: 'CAF', group: 'K', elo: 1775, pot: 2 },
-  { id: 'UZB', name: 'Uzbekistan', name_cn: '乌兹别克', flag: '🇺🇿', confederation: 'AFC', group: 'K', elo: 1780, pot: 3 },
-  { id: 'COL', name: 'Colombia', name_cn: '哥伦比亚', flag: '🇨🇴', confederation: 'CONMEBOL', group: 'K', elo: 1855, pot: 4 },
+  { id: 'POR', name: 'Portugal', name_cn: '葡萄牙', flag: '🇵🇹', confederation: 'UEFA', group: 'K', elo: 1998, pot: 1 },
+  { id: 'COD', name: 'DR Congo', name_cn: '刚果民主共和国', flag: '🇨🇩', confederation: 'CAF', group: 'K', elo: 1780, pot: 2 },
+  { id: 'UZB', name: 'Uzbekistan', name_cn: '乌兹别克', flag: '🇺🇿', confederation: 'AFC', group: 'K', elo: 1784, pot: 3 },
+  { id: 'COL', name: 'Colombia', name_cn: '哥伦比亚', flag: '🇨🇴', confederation: 'CONMEBOL', group: 'K', elo: 1874, pot: 4 },
   
-  { id: 'ENG', name: 'England', name_cn: '英格兰', flag: '🏴', confederation: 'UEFA', group: 'L', elo: 1975, pot: 1 },
-  { id: 'CRO', name: 'Croatia', name_cn: '克罗地亚', flag: '🇭🇷', confederation: 'UEFA', group: 'L', elo: 1895, pot: 2 },
-  { id: 'GHA', name: 'Ghana', name_cn: '加纳', flag: '🇬🇭', confederation: 'CAF', group: 'L', elo: 1765, pot: 3 },
-  { id: 'PAN', name: 'Panama', name_cn: '巴拿马', flag: '🇵🇦', confederation: 'CONCACAF', group: 'L', elo: 1740, pot: 4 },
+  { id: 'ENG', name: 'England', name_cn: '英格兰', flag: '🏴', confederation: 'UEFA', group: 'L', elo: 2018, pot: 1 },
+  { id: 'CRO', name: 'Croatia', name_cn: '克罗地亚', flag: '🇭🇷', confederation: 'UEFA', group: 'L', elo: 1906, pot: 2 },
+  { id: 'GHA', name: 'Ghana', name_cn: '加纳', flag: '🇬🇭', confederation: 'CAF', group: 'L', elo: 1768, pot: 3 },
+  { id: 'PAN', name: 'Panama', name_cn: '巴拿马', flag: '🇵🇦', confederation: 'CONCACAF', group: 'L', elo: 1742, pot: 4 },
 ];
 
 const GROUP_STAGES = [
@@ -375,26 +375,83 @@ class IntegratedPredictor {
   }
 
   predictChampion() {
-    const predictions = WORLD_CUP_2026_TEAMS.map(team => {
-      const totalElo = WORLD_CUP_2026_TEAMS.reduce((sum, t) => sum + t.elo, 0);
-      let baseProb = team.elo / totalElo;
-      const confedFactor = ['UEFA', 'CONMEBOL'].includes(team.confederation) ? 1.1 : 0.9;
-      const potFactor = team.pot === 1 ? 1.15 : team.pot === 4 ? 0.95 : 1.0;
-      const prob = baseProb * confedFactor * potFactor;
-      
+    const averageRating = WORLD_CUP_2026_TEAMS.reduce((sum, team) => sum + team.elo, 0) / WORLD_CUP_2026_TEAMS.length;
+
+    const formMomentum = {
+      ESP: 1.08,
+      FRA: 1.07,
+      ENG: 1.05,
+      ARG: 1.04,
+      POR: 1.03,
+      NOR: 1.08,
+      BRA: 0.98,
+      BEL: 0.97,
+      GER: 1.01,
+      NED: 1.01,
+    };
+
+    const confederationAdjustment = {
+      UEFA: 1.025,
+      CONMEBOL: 1.015,
+      CAF: 0.985,
+      AFC: 0.965,
+      CONCACAF: 0.965,
+      OFC: 0.94,
+    };
+
+    const potAdjustment = {
+      1: 1.015,
+      2: 1.0,
+      3: 0.99,
+      4: 0.98,
+    };
+
+    const scoredTeams = WORLD_CUP_2026_TEAMS.map((team) => {
+      const groupTeams = WORLD_CUP_2026_TEAMS.filter((candidate) => candidate.group === team.group && candidate.id !== team.id);
+      const groupAverage = groupTeams.reduce((sum, candidate) => sum + candidate.elo, 0) / Math.max(1, groupTeams.length);
+      const strongestGroupOpponent = Math.max(...groupTeams.map((candidate) => candidate.elo));
+
+      const strengthScore = Math.exp((team.elo - averageRating) / 125);
+      const groupDifficulty = Math.max(0.90, Math.min(1.08, 1 - ((groupAverage - averageRating) / 1150)));
+      const eliteOpponentPenalty = strongestGroupOpponent - team.elo > 80 ? 0.965 : 1.0;
+      const pathScore = groupDifficulty * eliteOpponentPenalty;
+      const confedScore = confederationAdjustment[team.confederation] || 1.0;
+      const seedScore = potAdjustment[team.pot] || 1.0;
+      const momentumScore = formMomentum[team.id] || 1.0;
+      const rawScore = strengthScore * pathScore * confedScore * seedScore * momentumScore;
+
       return {
+        team,
+        rawScore,
+        model_breakdown: {
+          strength_rating: team.elo,
+          strength_score: Math.round(strengthScore * 1000) / 1000,
+          path_score: Math.round(pathScore * 1000) / 1000,
+          confederation_score: Math.round(confedScore * 1000) / 1000,
+          seed_score: Math.round(seedScore * 1000) / 1000,
+          momentum_score: Math.round(momentumScore * 1000) / 1000,
+        },
+      };
+    });
+
+    const totalScore = scoredTeams.reduce((sum, entry) => sum + entry.rawScore, 0);
+
+    return scoredTeams
+      .map(({ team, rawScore, model_breakdown }) => ({
         team_id: team.id,
         name: team.name,
         name_cn: team.name_cn,
         flag: team.flag,
-        probability: Math.round(prob * 10000) / 100,
+        flag_code: team.flag_code,
+        probability: Math.round((rawScore / totalScore) * 10000) / 100,
         elo: team.elo,
         group: team.group,
-        pot: team.pot
-      };
-    });
-    
-    return predictions.sort((a, b) => b.probability - a.probability).slice(0, 10);
+        pot: team.pot,
+        model_breakdown,
+        model_note: 'Hybrid champion model: strength rating leads; group path, recent momentum, confederation context, and seed/pot are smaller adjustments.',
+      }))
+      .sort((a, b) => b.probability - a.probability)
+      .slice(0, 16);
   }
 
   predictGroupStage(group) {
