@@ -1,37 +1,48 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
-import { setAuthSession } from '../lib/auth-client';
+import { createOwnerUser, getAuthState, setAuthSession } from '../lib/auth-client';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLocalHost, setIsLocalHost] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setIsLocalHost(['localhost', '127.0.0.1'].includes(window.location.hostname));
+  }, []);
+
+  const goNext = () => {
+    router.push(router.query.next || '/settings');
+  };
 
   const handleLogin = (event) => {
     event.preventDefault();
     setError('');
 
-    let user = null;
-    try {
-      user = JSON.parse(localStorage.getItem('wc_user') || localStorage.getItem('user') || 'null');
-    } catch {
-      user = null;
-    }
+    const state = getAuthState();
+    const user = state.user;
 
     if (!user) {
-      setError('No local account found. Register first on this browser.');
+      setError('No local account found. Use Register first. On localhost, use Owner local access.');
       return;
     }
 
     if (user.email === email && user.password === password && user.ageVerified) {
       setAuthSession(user);
-      router.push(router.query.next || '/predict');
+      goNext();
       return;
     }
 
     setError('Invalid email, password, or 18+ access status.');
+  };
+
+  const handleOwnerAccess = () => {
+    const owner = createOwnerUser();
+    setAuthSession(owner);
+    goNext();
   };
 
   return (
@@ -41,7 +52,7 @@ export default function Login() {
           <div className="mb-8 text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Member workspace</p>
             <h1 className="mt-3 text-4xl font-bold text-white">Welcome back</h1>
-            <p className="mt-3 text-slate-400">Sign in with email and password to open the full analytics interface.</p>
+            <p className="mt-3 text-slate-400">Register once, then sign in with email and password to open the full analytics interface.</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
@@ -53,6 +64,17 @@ export default function Login() {
                 Sign in
               </button>
             </form>
+
+            {isLocalHost && (
+              <button
+                type="button"
+                onClick={handleOwnerAccess}
+                className="mt-3 w-full rounded-md border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 font-bold text-emerald-100 transition hover:bg-emerald-400/20"
+              >
+                Local owner access
+              </button>
+            )}
+
             <p className="mt-5 text-center text-sm text-slate-400">
               No account yet? <a href="/register" className="font-bold text-emerald-300">Register here</a>
             </p>

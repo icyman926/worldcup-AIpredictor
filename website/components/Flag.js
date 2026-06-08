@@ -52,7 +52,8 @@ const flagCodeMap = {
 export { flagCodeMap };
 
 export default function Flag({ team, className = '' }) {
-  const code = team?.flag_code || flagCodeMap[team?.id];
+  const teamId = team?.id || team?.team_id;
+  const code = team?.flag_code || flagCodeMap[teamId];
 
   if (!team || !code) {
     return (
@@ -66,9 +67,11 @@ export default function Flag({ team, className = '' }) {
     <img
       src={`https://flagcdn.com/w160/${code}.png`}
       srcSet={`https://flagcdn.com/w80/${code}.png 1x, https://flagcdn.com/w160/${code}.png 2x`}
-      alt={`${team.name} flag`}
+      alt={`${team.name || teamId} flag`}
       className={`rounded-md object-cover shadow-sm ring-1 ring-white/10 ${className}`}
       loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
     />
   );
 }

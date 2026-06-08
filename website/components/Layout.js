@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
-import { clearAuthSession, getStoredUser, isBrowserAuthenticated } from '../lib/auth-client';
+import { clearAuthSession, getAuthState } from '../lib/auth-client';
+
+const publicPaths = ['/', '/login', '/register', '/admin-login'];
 
 const publicNavItems = [
   { href: '/', label: 'Home' },
@@ -24,14 +26,19 @@ export default function Layout({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
+  const isPublicPage = publicPaths.includes(router.pathname || '/');
+
   useEffect(() => {
-    const authed = isBrowserAuthenticated();
-    setIsLoggedIn(authed);
-    setUser(authed ? getStoredUser() : null);
+    const state = getAuthState();
+    setIsLoggedIn(state.authed);
+    setUser(state.user);
     setAuthChecked(true);
   }, [router.pathname]);
 
-  const navItems = useMemo(() => (isLoggedIn ? privateNavItems : publicNavItems), [isLoggedIn]);
+  const navItems = useMemo(() => {
+    if (isPublicPage) return publicNavItems;
+    return isLoggedIn ? privateNavItems : publicNavItems;
+  }, [isLoggedIn, isPublicPage]);
 
   const handleLogout = () => {
     clearAuthSession();
@@ -39,6 +46,8 @@ export default function Layout({ children }) {
     setUser(null);
     router.push('/');
   };
+
+  const showPrivateControls = authChecked && isLoggedIn && !isPublicPage;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-white">
@@ -56,7 +65,7 @@ export default function Layout({ children }) {
               </Link>
             ))}
 
-            {authChecked && isLoggedIn ? (
+            {showPrivateControls ? (
               <>
                 <span className="hidden items-center gap-2 text-slate-200 sm:flex">
                   <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-500 text-sm font-bold text-slate-950">

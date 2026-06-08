@@ -13,6 +13,8 @@ export function calculateAge(dateOfBirth) {
 
 export function setAuthSession(user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.removeItem('user');
+  localStorage.removeItem('isLoggedIn');
   document.cookie = AUTH_COOKIE + '=1; path=/; max-age=2592000; SameSite=Lax';
 }
 
@@ -32,7 +34,25 @@ export function getStoredUser() {
   }
 }
 
-export function isBrowserAuthenticated() {
-  if (typeof document === 'undefined') return false;
-  return document.cookie.split(';').some((item) => item.trim().startsWith(AUTH_COOKIE + '=1'));
+export function getAuthState() {
+  if (typeof document === 'undefined') return { authed: false, user: null };
+  const hasCookie = document.cookie.split(';').some((item) => item.trim().startsWith(AUTH_COOKIE + '=1'));
+  const user = getStoredUser();
+  if (hasCookie && !user) {
+    clearAuthSession();
+    return { authed: false, user: null };
+  }
+  return { authed: Boolean(hasCookie && user?.ageVerified), user };
+}
+
+export function createOwnerUser() {
+  return {
+    username: 'Owner',
+    email: 'owner@local.dev',
+    password: 'Owner2026!',
+    dateOfBirth: '1990-01-01',
+    ageVerified: true,
+    plan: 'Owner',
+    createdAt: new Date().toISOString(),
+  };
 }

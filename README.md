@@ -15,13 +15,14 @@ A Next.js football analytics and probability research platform for World Cup 202
 - Logged-out visitors can see only `Home`, `Login`, and `Register`.
 - Middleware redirects private routes such as `/predict`, `/groupstage`, `/champion`, `/settings`, `/pricing`, `/about`, and `/howto` to `/login`.
 - Registration uses a basic 18+ gate: date of birth plus explicit confirmation.
-- After successful registration/login, a browser cookie unlocks the full analytics workspace.
+- After registration/login, a browser cookie plus local user profile unlocks the full analytics workspace.
+- Local development includes a localhost-only `Local owner access` button on `/login` so the project owner can configure APIs without creating a public account.
 - Current auth is still an MVP. Before real paid plans or VPS launch, replace it with a backend user database, hashed passwords, server sessions/JWT, server-side age records, and real admin metrics.
 
 ## API Integration Status
 
 - Settings includes API key fields and real `Test` buttons for Gemini, OpenAI, DeepSeek, The Odds API, API-Football, and Football-Data.org.
-- Gemini can now be passed into match predictions as live qualitative context.
+- Gemini, OpenAI, and DeepSeek can be passed into match predictions as live qualitative context.
 - If no provider test succeeds, predictions fall back to local Elo, Poisson, venue, and manual odds only.
 - Browser-stored keys are acceptable for early private testing only. Production should move keys to server environment variables and never expose platform-owned keys to users.
 
