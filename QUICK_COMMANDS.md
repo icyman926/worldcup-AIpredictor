@@ -122,3 +122,32 @@ npm run dev
 ---
 
 **最后更新**: 2026年6月6日
+
+## Public Launch Commands
+
+Production website:
+
+```text
+https://website-tau-eosin-18.vercel.app
+```
+
+Build, push, and deploy:
+
+```powershell
+cd D:\worldcup-predictor\website
+npm.cmd run build
+cd D:\worldcup-predictor
+git status --short
+git add .
+git commit -m "Prepare public launch"
+git push
+cd D:\worldcup-predictor\website
+vercel --prod
+```
+
+Local proxy development:
+
+```powershell
+cd D:\worldcup-predictor\website
+powershell -ExecutionPolicy Bypass -File scripts\dev-with-proxy.ps1 -ProxyPort 7890 -Port 3003
+```

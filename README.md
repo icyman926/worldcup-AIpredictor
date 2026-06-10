@@ -1,38 +1,95 @@
 # World Cup AI Predictor
 
-A Next.js football analytics and probability research platform for World Cup 2026. The product is positioned as a reporting SaaS prototype: analytics only, not betting advice, and 18+ only.
+**World Cup AI Predictor** is a global football analytics, probability research, and reporting SaaS prototype for the 2026 FIFA World Cup.
 
-## Public Positioning
+Live site: https://website-tau-eosin-18.vercel.app
 
-- Football analytics / probability research / reporting SaaS.
-- Model outputs are for research, education, and reporting.
-- Not betting advice, gambling advice, financial advice, or guaranteed outcomes.
-- 18+ only.
-- Early phase has no paid checkout. Build audience and trust first, then connect payments when premium demand is proven.
+Analytics only. Not betting advice. 18+ only.
 
-## Access Model
+## What It Does
 
-- Logged-out visitors can see only `Home`, `Login`, and `Register`.
-- Middleware redirects private routes such as `/predict`, `/groupstage`, `/champion`, `/settings`, `/pricing`, `/about`, and `/howto` to `/login`.
-- Registration uses a basic 18+ gate: date of birth plus explicit confirmation.
-- After registration/login, a browser cookie plus local user profile unlocks the full analytics workspace.
-- Local development includes a localhost-only `Local owner access` button on `/login` so the project owner can configure APIs without creating a public account.
-- Current auth is still an MVP. Before real paid plans or VPS launch, replace it with a backend user database, hashed passwords, server sessions/JWT, server-side age records, and real admin metrics.
+World Cup AI Predictor turns match data, team-strength models, market signals, and live AI research context into readable probability reports.
 
-## API Integration Status
+The platform is designed for:
 
-- Settings includes API key fields and real `Test` buttons for Gemini, OpenAI, DeepSeek, The Odds API, API-Football, and Football-Data.org.
-- Gemini, OpenAI, and DeepSeek can be passed into match predictions as live qualitative context.
-- If no provider test succeeds, predictions fall back to local Elo, Poisson, venue, and manual odds only.
-- Browser-stored keys are acceptable for early private testing only. Production should move keys to server environment variables and never expose platform-owned keys to users.
+- Football fans who want transparent match probability research.
+- Analysts who need fast match previews and source-backed reasoning.
+- Content creators who need report-ready World Cup storylines.
+- Developers exploring AI-assisted sports analytics products.
 
-## Project Layout
+## Product Advantages
 
-- `website/` - Vercel-deployed Next.js frontend and API routes.
-- `backend/` - Optional FastAPI backend prototype.
-- `DEPLOYMENT_GUIDE.md` - Detailed deployment notes.
-- `QUICK_COMMANDS.md` - Common local and deployment commands.
-- `COMMERCIALIZATION.md` - Product and monetization roadmap.
+- **Transparent probability model**: combines Elo-style strength, Poisson goal modeling, venue context, odds signals, and live provider context.
+- **Live AI research layer**: uses connected AI providers to summarize injuries, squad news, tactical matchup, venue pressure, commercial context, and data uncertainty.
+- **DeepSeek V4 Pro final synthesis**: successful provider contexts are fused into a readable final probability rationale.
+- **Source-backed evidence cards**: detailed source notes stay visible below the summary, while the final synthesis stays clean and readable.
+- **World Cup 2026 focus**: group fixtures, match predictor, champion forecast, national flags, and tournament-ready UI.
+- **Global English UI**: built as a public-facing international product.
+- **Compliance-first positioning**: analytics only, not betting advice, not guaranteed outcomes, and 18+ only.
+
+## Public Access Model
+
+- Logged-out visitors can see the public Home, Login, and Register screens.
+- Full analytics pages require account access.
+- Registration includes a basic 18+ confirmation gate.
+- The current authentication layer is an MVP suitable for early launch and validation.
+- Before paid subscriptions or serious production traffic, move auth and API keys to a hardened backend with hashed passwords, server sessions, and database-backed user records.
+
+## API and Model Stack
+
+The product is designed to support:
+
+- OpenAI API for structured football research context.
+- Google Gemini for qualitative match context when available.
+- DeepSeek V4 Pro for final reasoning synthesis.
+- The Odds API for market-implied probability signals.
+- Football-Data.org for fixture confirmation.
+- Sportmonks / future sports-data providers for deeper national-team, player, injury, and lineup coverage.
+- GDELT or other news providers for public commercial and political context signals.
+
+If a live provider is unavailable, the system keeps that factor neutral instead of inventing certainty.
+
+## Core Pages
+
+- `/` - public product home.
+- `/login` - member login.
+- `/register` - member registration and 18+ gate.
+- `/predict` - match probability research workspace.
+- `/groupstage` - World Cup group fixtures and quick prediction entry.
+- `/champion` - tournament win probability forecast.
+- `/settings` - API access and provider testing.
+- `/pricing` - future SaaS pricing strategy.
+
+## Deployment
+
+The production app is deployed from the `website/` folder to Vercel.
+
+Recommended Vercel settings:
+
+- Framework: Next.js
+- Root Directory: `website`
+- Install Command: `npm ci`
+- Build Command: `npm run build`
+- Output: Next.js default
+- Node.js: 20.x or newer
+
+Production deploy:
+
+```powershell
+cd D:\worldcup-predictor\website
+vercel --prod
+```
+
+GitHub release flow:
+
+```powershell
+cd D:\worldcup-predictor
+git add .
+git commit -m "Prepare public launch"
+git push
+cd D:\worldcup-predictor\website
+vercel --prod
+```
 
 ## Local Development
 
@@ -42,19 +99,56 @@ npm ci
 npm.cmd run dev
 ```
 
-Open http://localhost:3000.
-
-## Production Build
+For local AI API calls behind a proxy:
 
 ```powershell
 cd D:\worldcup-predictor\website
-npm.cmd run clean
-npm.cmd run build
+powershell -ExecutionPolicy Bypass -File scripts\dev-with-proxy.ps1 -ProxyPort 7890 -Port 3003
 ```
 
-## Vercel
+Open:
 
-Set the Vercel project Root Directory to `website`.
-Use Node.js 20.x, `npm ci` as the install command, and `npm run build` as the build command.
+```text
+http://localhost:3003
+```
 
-Do not commit `.env.local`, `.vercel`, `.next`, or `node_modules`.
+Remember: localhost works only on your own machine. Public users should use the Vercel production URL.
+
+## Suggested GitHub Topics
+
+Add these topics in the GitHub repository settings to improve discovery:
+
+```text
+world-cup
+world-cup-2026
+football-analytics
+soccer-analytics
+sports-analytics
+ai
+artificial-intelligence
+nextjs
+vercel
+openai
+gemini
+deepseek
+elo-rating
+poisson-model
+probability
+data-visualization
+sports-data
+saas
+reporting
+football-data
+```
+
+## Roadmap
+
+- Add server-side account database and admin dashboard.
+- Move platform-owned API keys to server environment variables.
+- Add saved prediction history and shareable report pages.
+- Add stronger football-data provider coverage for squads, injuries, lineups, and H2H records.
+- Add premium tiers only after the free product earns public trust.
+
+## Disclaimer
+
+World Cup AI Predictor is a football analytics and probability research project. It is not betting advice, gambling advice, financial advice, or a guarantee of match outcomes. Use it for research, reporting, and entertainment only. 18+ only.
