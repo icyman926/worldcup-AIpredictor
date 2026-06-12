@@ -432,6 +432,12 @@ export default function Predict() {
 
   const [liveState, setLiveState] = useState(emptyLiveState);
 
+  const [autoLiveEnabled, setAutoLiveEnabled] = useState(false);
+
+  const [liveSnapshotStatus, setLiveSnapshotStatus] = useState(null);
+
+  const [lastLiveSnapshot, setLastLiveSnapshot] = useState(null);
+
 
 
 
@@ -548,6 +554,53 @@ export default function Predict() {
 
   const updateLiveState = (key, value) => setLiveState((current) => ({ ...current, [key]: value }));
 
+  const applyLiveSnapshot = (snapshot) => {
+    if (!snapshot?.live_state) return;
+    const state = snapshot.live_state;
+    setLiveState((current) => ({
+      ...current,
+      enabled: Boolean(state.enabled),
+      minute: state.minute === '' || state.minute === undefined ? current.minute : String(state.minute),
+      homeScore: String(state.homeScore ?? current.homeScore ?? 0),
+      awayScore: String(state.awayScore ?? current.awayScore ?? 0),
+      homeRedCards: String(state.homeRedCards ?? current.homeRedCards ?? 0),
+      awayRedCards: String(state.awayRedCards ?? current.awayRedCards ?? 0),
+      liveHomeOdds: state.liveOdds?.home ? String(state.liveOdds.home) : current.liveHomeOdds,
+      liveDrawOdds: state.liveOdds?.draw ? String(state.liveOdds.draw) : current.liveDrawOdds,
+      liveAwayOdds: state.liveOdds?.away ? String(state.liveOdds.away) : current.liveAwayOdds,
+    }));
+  };
+
+  const fetchLiveSnapshot = async () => {
+    if (!homeTeam || !awayTeam || homeTeam === awayTeam) {
+      setLiveSnapshotStatus({ state: 'none', text: 'Select two teams before starting auto live feed.' });
+      return null;
+    }
+
+    setLiveSnapshotStatus({ state: 'loading', text: 'Checking live score and live market providers...' });
+    try {
+      const response = await fetch('/api/predict/live-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_team: homeTeam, away_team: awayTeam, apiKeys }),
+      });
+      const snapshot = await readApiJson(response, 'Live snapshot API');
+      if (!response.ok || snapshot.error) throw new Error(snapshot.error || 'Live snapshot failed');
+      setLastLiveSnapshot(snapshot);
+      if (snapshot.found) {
+        applyLiveSnapshot(snapshot);
+        const providerText = snapshot.providers?.map((item) => item.provider + (item.found ? ' ready' : ' no match')).join(', ');
+        setLiveSnapshotStatus({ state: 'applied', text: 'Auto live feed updated from providers: ' + (providerText || 'live snapshot') });
+      } else {
+        const providerText = snapshot.providers?.map((item) => item.provider + ': ' + item.message).join(' | ');
+        setLiveSnapshotStatus({ state: 'none', text: 'No matching live fixture found yet. Manual live input remains available. ' + (providerText || '') });
+      }
+      return snapshot;
+    } catch (error) {
+      setLiveSnapshotStatus({ state: 'error', text: error.message || 'Live snapshot failed.' });
+      return null;
+    }
+  };
 
 
 
@@ -583,6 +636,14 @@ export default function Predict() {
 
 
 
+
+
+  useEffect(() => {
+    if (!autoLiveEnabled || !homeTeam || !awayTeam || homeTeam === awayTeam) return undefined;
+    fetchLiveSnapshot();
+    const timer = setInterval(fetchLiveSnapshot, 120000);
+    return () => clearInterval(timer);
+  }, [autoLiveEnabled, homeTeam, awayTeam, apiKeys]);
 
   useEffect(() => {
 
@@ -4443,8 +4504,20 @@ export default function Predict() {
                 <OddsInput label="Live draw odds" value={liveState.liveDrawOdds} onChange={(value) => updateLiveState('liveDrawOdds', value)} />
                 <OddsInput label="Live Team B odds" value={liveState.liveAwayOdds} onChange={(value) => updateLiveState('liveAwayOdds', value)} />
               </div>
+              {liveSnapshotStatus && (
+                <div className={'mt-4 rounded-md border p-3 text-sm ' + statusClass(liveSnapshotStatus.state)}>
+                  {liveSnapshotStatus.text}
+                </div>
+              )}
+              {lastLiveSnapshot?.checkedAt && (
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <Info label="Last live check" value={new Date(lastLiveSnapshot.checkedAt).toLocaleTimeString()} />
+                  <Info label="Score provider" value={lastLiveSnapshot.score_provider?.source || 'No live score match'} />
+                  <Info label="Market provider" value={lastLiveSnapshot.market_provider?.source || 'No live odds match'} />
+                </div>
+              )}
               <p className="mt-4 text-xs leading-5 text-cyan-100/80">
-                MVP rule: live probability is recalibrated by minute, scoreline, red-card pressure, team-strength gap, and optional in-play odds. Analytics only, not betting advice.
+                MVP 2.0 rule: auto live feed checks configured live-score and market providers every 120 seconds, then recalibrates by minute, scoreline, red-card pressure, team-strength gap, and optional in-play odds. Analytics only, not betting advice.
               </p>
             </div>
 
