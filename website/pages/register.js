@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
-import { calculateAge, setAuthSession } from '../lib/auth-client';
+import { calculateAge, getAuthState, setAuthSession } from '../lib/auth-client';
 
 export default function Register() {
   const router = useRouter();
@@ -14,6 +14,13 @@ export default function Register() {
     confirm18: false,
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    const state = getAuthState();
+    if (state.authed) {
+      router.replace('/predict');
+    }
+  }, [router]);
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -38,7 +45,7 @@ export default function Register() {
 
     const user = {
       username: form.username,
-      email: form.email,
+      email: form.email.trim().toLowerCase(),
       password: form.password,
       dateOfBirth: form.dateOfBirth,
       ageVerified: true,
@@ -58,7 +65,7 @@ export default function Register() {
           <div className="mb-8 text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">18+ access</p>
             <h1 className="mt-3 text-4xl font-bold text-white">Create free account</h1>
-            <p className="mt-3 text-slate-400">Basic early-stage age gate. Production server auth comes later before paid plans.</p>
+            <p className="mt-3 text-slate-400">Register once on this browser. Your 18+ analytics access stays remembered unless browser data is cleared.</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">

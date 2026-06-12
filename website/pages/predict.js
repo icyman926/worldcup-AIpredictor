@@ -247,6 +247,18 @@ const venueOptions = [
 
 const emptyOdds = { home: '', draw: '', away: '' };
 
+const emptyLiveState = {
+  enabled: false,
+  minute: '',
+  homeScore: '0',
+  awayScore: '0',
+  homeRedCards: '0',
+  awayRedCards: '0',
+  liveHomeOdds: '',
+  liveDrawOdds: '',
+  liveAwayOdds: '',
+};
+
 
 
 
@@ -418,6 +430,8 @@ export default function Predict() {
 
   const [odds, setOdds] = useState(emptyOdds);
 
+  const [liveState, setLiveState] = useState(emptyLiveState);
+
 
 
 
@@ -531,6 +545,8 @@ export default function Predict() {
 
 
   const [error, setError] = useState('');
+
+  const updateLiveState = (key, value) => setLiveState((current) => ({ ...current, [key]: value }));
 
 
 
@@ -2594,6 +2610,23 @@ export default function Predict() {
 
 
 
+      if (liveState.enabled) {
+        payload.live_state = {
+          enabled: true,
+          source: 'manual-live-mvp',
+          minute: Number(liveState.minute || 0),
+          homeScore: Number(liveState.homeScore || 0),
+          awayScore: Number(liveState.awayScore || 0),
+          homeRedCards: Number(liveState.homeRedCards || 0),
+          awayRedCards: Number(liveState.awayRedCards || 0),
+          liveOdds: {
+            home: liveState.liveHomeOdds ? Number(liveState.liveHomeOdds) : null,
+            draw: liveState.liveDrawOdds ? Number(liveState.liveDrawOdds) : null,
+            away: liveState.liveAwayOdds ? Number(liveState.liveAwayOdds) : null,
+          },
+        };
+      }
+
       if (oddsReady) {
 
 
@@ -4371,6 +4404,50 @@ export default function Predict() {
 
 
 
+            <div className="mt-6 rounded-lg border border-cyan-400/20 bg-cyan-400/5 p-5">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Live match intelligence</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Optional in-play layer. Add current minute, score, red cards, and live odds when a match is running.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-cyan-100">
+                  <input
+                    type="checkbox"
+                    checked={liveState.enabled}
+                    onChange={(event) => updateLiveState('enabled', event.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Enable live layer
+                </label>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-6">
+                <LiveInput label="Minute" value={liveState.minute} onChange={(value) => updateLiveState('minute', value)} placeholder="68" />
+                <LiveInput label={(homeTeam || 'Team A') + ' score'} value={liveState.homeScore} onChange={(value) => updateLiveState('homeScore', value)} />
+                <LiveInput label={(awayTeam || 'Team B') + ' score'} value={liveState.awayScore} onChange={(value) => updateLiveState('awayScore', value)} />
+                <LiveInput label="Team A red cards" value={liveState.homeRedCards} onChange={(value) => updateLiveState('homeRedCards', value)} />
+                <LiveInput label="Team B red cards" value={liveState.awayRedCards} onChange={(value) => updateLiveState('awayRedCards', value)} />
+                <button
+                  type="button"
+                  onClick={() => setLiveState(emptyLiveState)}
+                  className="rounded-md border border-white/15 px-3 py-2 text-sm font-bold text-slate-200 transition hover:bg-white/10"
+                >
+                  Reset live
+                </button>
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <OddsInput label="Live Team A odds" value={liveState.liveHomeOdds} onChange={(value) => updateLiveState('liveHomeOdds', value)} />
+                <OddsInput label="Live draw odds" value={liveState.liveDrawOdds} onChange={(value) => updateLiveState('liveDrawOdds', value)} />
+                <OddsInput label="Live Team B odds" value={liveState.liveAwayOdds} onChange={(value) => updateLiveState('liveAwayOdds', value)} />
+              </div>
+              <p className="mt-4 text-xs leading-5 text-cyan-100/80">
+                MVP rule: live probability is recalibrated by minute, scoreline, red-card pressure, team-strength gap, and optional in-play odds. Analytics only, not betting advice.
+              </p>
+            </div>
+
             <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
 
@@ -5320,6 +5397,31 @@ export default function Predict() {
 
 
 
+
+                {result.live_context?.applied && (
+                  <div className="mb-6 rounded-lg border border-cyan-400/20 bg-cyan-400/5 p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-white">Live in-play analytics</h3>
+                        <p className="mt-2 text-sm text-slate-400">
+                          Minute {result.live_context.minute} · Score {result.live_context.score.home}-{result.live_context.score.away} · Red cards {result.live_context.red_cards.home}-{result.live_context.red_cards.away}
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100">
+                        Next goal: {homeTeam} {result.live_context.next_goal.home}% / {awayTeam} {result.live_context.next_goal.away}%
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-4">
+                      <Info label="Live base" value={result.live_context.base_probabilities.home + ' / ' + result.live_context.base_probabilities.draw + ' / ' + result.live_context.base_probabilities.away + '%'} />
+                      <Info label="Live final" value={result.live_context.final_probabilities.home + ' / ' + result.live_context.final_probabilities.draw + ' / ' + result.live_context.final_probabilities.away + '%'} />
+                      <Info label="Comeback pressure" value={result.live_context.trailing_team ? result.live_context.trailing_team + ' avoid defeat ' + result.live_context.comeback_probability + '%' : 'Level match'} />
+                      <Info label="Market blend" value={Math.round((result.live_context.adjustments.market_weight || 0) * 100) + '%'} />
+                    </div>
+                    <div className="mt-4 rounded-md bg-slate-950/50 p-4 text-sm leading-6 text-cyan-50/90">
+                      {result.live_context.notes.join(' ')}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-3">
 
@@ -9539,3 +9641,20 @@ function round(value) {
 
 
 
+
+
+function LiveInput({ label, value, onChange, placeholder = '0' }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-300">{label}</span>
+      <input
+        type="number"
+        min="0"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-300"
+      />
+    </label>
+  );
+}

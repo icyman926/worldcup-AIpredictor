@@ -1,4 +1,5 @@
-import { IntegratedPredictor } from '../../../lib/predictor';
+import { IntegratedPredictor } from '../../../lib/predictor';
+import { applyLiveMatchContext } from '../../../lib/live-model';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -101,7 +102,8 @@ export default function handler(req, res) {
       draw_odds,
       away_odds,
       external_context,
-      external_context_meta,
+      external_context_meta,
+      live_state,
     } = req.body || {};
 
     if (!home_team || !away_team) {
@@ -123,7 +125,12 @@ export default function handler(req, res) {
       0.9
     );
 
-    res.status(200).json(applyExternalContext(baseResult, external_context, external_context_meta));
+    const contextResult = applyExternalContext(baseResult, external_context, external_context_meta);
+    const liveResult = live_state?.enabled
+      ? applyLiveMatchContext(contextResult, live_state, { homeTeam: home_team, awayTeam: away_team })
+      : contextResult;
+
+    res.status(200).json(liveResult);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

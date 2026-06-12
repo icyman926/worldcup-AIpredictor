@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
-import { createOwnerUser, getAuthState, setAuthSession } from '../lib/auth-client';
+import { createOwnerUser, findRegisteredUser, getAuthState, setAuthSession } from '../lib/auth-client';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,7 +12,11 @@ export default function Login() {
 
   useEffect(() => {
     setIsLocalHost(['localhost', '127.0.0.1'].includes(window.location.hostname));
-  }, []);
+    const state = getAuthState();
+    if (state.authed) {
+      router.replace(router.query.next || '/predict');
+    }
+  }, [router]);
 
   const goNext = () => {
     router.push(router.query.next || '/settings');
@@ -22,15 +26,14 @@ export default function Login() {
     event.preventDefault();
     setError('');
 
-    const state = getAuthState();
-    const user = state.user;
+    const user = findRegisteredUser(email) || getAuthState().user;
 
     if (!user) {
-      setError('No local account found. Use Register first. On localhost, use Owner local access.');
+      setError('No account found in this browser. Register once on this device, or sign in on the browser where you registered.');
       return;
     }
 
-    if (user.email === email && user.password === password && user.ageVerified) {
+    if (user.email === email.trim().toLowerCase() && user.password === password && user.ageVerified) {
       setAuthSession(user);
       goNext();
       return;
@@ -52,7 +55,7 @@ export default function Login() {
           <div className="mb-8 text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Member workspace</p>
             <h1 className="mt-3 text-4xl font-bold text-white">Welcome back</h1>
-            <p className="mt-3 text-slate-400">Register once, then sign in with email and password to open the full analytics interface.</p>
+            <p className="mt-3 text-slate-400">Register once on this browser. Your 18+ access stays remembered for future visits unless browser data is cleared.</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
