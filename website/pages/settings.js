@@ -64,6 +64,8 @@ const apiDefaults = {
 
   footballData: '',
   sportmonks: '',
+  qwen: '',
+  qwenModel: 'qwen3.7-plus',
 
 
 
@@ -219,6 +221,14 @@ const providers = [
 
 
 
+  },
+  {
+    key: 'qwen',
+    name: 'Alibaba Qwen / Tongyi',
+    prefix: 'sk-...',
+    role: 'China-hosted context model for injuries, squad depth, tactical notes, team dynamics, commercial/political uncertainty, and report-ready evidence summaries.',
+    modelKey: 'qwenModel',
+    modelOptions: ['qwen3.7-plus', 'qwen3.7-max', 'qwen3-max-2026-01-23', 'qwen-plus', 'qwen-max', 'qwen-turbo', 'custom'],
   },
   {
     key: 'sportmonks',
@@ -424,7 +434,7 @@ export default function Settings() {
         headers: { 'Content-Type': 'application/json' },
 
 
-        body: JSON.stringify({ provider, apiKey: key }),
+        body: JSON.stringify({ provider, apiKey: key, qwenModel: apiKeys.qwenModel }),
 
 
       });
@@ -685,6 +695,8 @@ export default function Settings() {
 
 
                   onTest={() => testProvider(provider.key)}
+                  modelValue={provider.modelKey ? apiKeys[provider.modelKey] : ''}
+                  onModelChange={(value) => provider.modelKey && updateApiKey(provider.modelKey, value)}
 
 
 
@@ -870,7 +882,7 @@ export default function Settings() {
 
 
 
-                Test buttons call real provider endpoints. Gemini, OpenAI, and DeepSeek context is passed into match predictions when configured.
+                Test buttons call real provider endpoints. Qwen/Tongyi and DeepSeek are the China-server core path; Gemini and OpenAI remain international enhancements when reachable.
 
 
 
@@ -942,7 +954,7 @@ async function readApiJson(response, label) {
 
 
 
-function ProviderCard({ provider, value, status, onChange, onTest }) {
+function ProviderCard({ provider, value, status, onChange, onTest, modelValue, onModelChange }) {
 
 
 
@@ -993,6 +1005,29 @@ function ProviderCard({ provider, value, status, onChange, onTest }) {
 
 
 
+
+      {provider.modelOptions && (
+        <div className="mb-3 grid gap-2 sm:grid-cols-[180px_1fr] sm:items-center">
+          <label className="text-sm font-semibold text-slate-300">Model</label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select
+              value={provider.modelOptions.includes(modelValue) ? modelValue : 'custom'}
+              onChange={(event) => onModelChange(event.target.value === 'custom' ? '' : event.target.value)}
+              className="rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400"
+            >
+              {provider.modelOptions.map((item) => (
+                <option key={item} value={item}>{item === 'custom' ? 'Custom model ID' : item}</option>
+              ))}
+            </select>
+            <input
+              value={modelValue || ''}
+              onChange={(event) => onModelChange(event.target.value)}
+              placeholder="qwen3.7-plus or your Bailian model ID"
+              className="flex-1 rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 

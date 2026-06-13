@@ -159,6 +159,32 @@ async function testOpenAI(apiKey) {
 
 
 
+async function testQwen(apiKey, model = 'qwen3.7-plus') {
+  try {
+    const { response, text } = await fetchText('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + apiKey,
+      },
+      body: JSON.stringify({
+        model: model || 'qwen3.7-plus',
+        messages: [
+          { role: 'system', content: 'You are a JSON-only health check.' },
+          { role: 'user', content: 'Return {"ok":true} only.' },
+        ],
+        temperature: 0,
+        max_tokens: 32,
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!response.ok) return fail('Qwen HTTP ' + response.status + ': ' + text.slice(0, 220), { http_status: response.status, model });
+    return ok('Alibaba Qwen / Tongyi responded successfully from this server.', { model });
+  } catch (error) {
+    return fail(error, { model });
+  }
+}
+
 async function testDeepSeek(apiKey) {
 
 
@@ -429,6 +455,7 @@ const testers = {
 
 
 
+  qwen: testQwen,
   deepseek: testDeepSeek,
 
 
@@ -518,7 +545,7 @@ export default async function handler(req, res) {
 
 
 
-  const { provider, apiKey } = req.body || {};
+  const { provider, apiKey, qwenModel } = req.body || {};
 
 
 
@@ -595,7 +622,7 @@ export default async function handler(req, res) {
 
 
 
-    const result = await testers[provider](apiKey);
+    const result = provider === 'qwen' ? await testers[provider](apiKey, qwenModel || req.body?.model) : await testers[provider](apiKey);
 
 
 

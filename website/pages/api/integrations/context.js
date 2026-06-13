@@ -1,4 +1,5 @@
 const GEMINI_MODEL = 'gemini-2.5-flash';
+const QWEN_DEFAULT_MODEL = 'qwen3.7-plus';
 
 
 
@@ -2393,6 +2394,45 @@ async function fetchText(url, options = {}, timeoutMs = 18000) {
 
 
 
+
+async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_MODEL) {
+  const selectedModel = model || QWEN_DEFAULT_MODEL;
+  const payload = {
+    model: selectedModel,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          'You are a football analytics context model for a probability research SaaS.',
+          'Return valid compact JSON only.',
+          'Do not provide betting advice or profit claims.',
+          'Use only cautious public-evidence language when discussing injuries, lineups, locker-room, political, commercial, or capital context.',
+        ].join(' '),
+      },
+      { role: 'user', content: buildContextPrompt(homeTeam, awayTeam) },
+    ],
+    temperature: 0.15,
+    max_tokens: 700,
+    response_format: { type: 'json_object' },
+  };
+
+  try {
+    const { response, text } = await fetchText('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + apiKey,
+      },
+      body: JSON.stringify(payload),
+    }, 20000);
+    if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + text.slice(0, 300));
+    const data = JSON.parse(text);
+    const output = data?.choices?.[0]?.message?.content || '';
+    return normalizeModelContext('qwen', output, selectedModel);
+  } catch (error) {
+    throw new Error('Qwen ' + selectedModel + ' request failed: ' + explainNetworkError(error));
+  }
+}
 
 async function getGeminiContext(apiKey, homeTeam, awayTeam) {
 
@@ -5387,6 +5427,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
 
 
+  const qwen = getProviderContext(contexts, 'qwen');
   const gemini = getProviderContext(contexts, 'gemini');
 
   const chatgpt = getProviderContext(contexts, 'chatgpt');
@@ -5398,6 +5439,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
 
 
+  const qwenRead = publicProviderSummary(qwen?.summary);
   const geminiRead = publicProviderSummary(gemini?.summary);
 
   const chatgptRead = publicProviderSummary(chatgpt?.summary);
@@ -5407,13 +5449,13 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
   const dataRead = publicProviderSummary(footballData?.summary) || 'Fixture and historical-data confirmation is limited, so the data layer does not add a decisive edge.';
 
-  const qualitativeRead = [openaiWebRead, geminiRead, chatgptRead].filter(Boolean).join(' ') || strongestProviderRead(contexts) || 'Qualitative model context is limited, so team-news and locker-room factors are treated cautiously.';
+  const qualitativeRead = [qwenRead, openaiWebRead, geminiRead, chatgptRead].filter(Boolean).join(' ') || strongestProviderRead(contexts) || 'Qualitative model context is limited, so team-news and locker-room factors are treated cautiously.';
   const evidenceItems = collectEvidenceItems(contexts);
   const injuryEvidence = firstEvidenceText(evidenceItems, ['player_status_injury'], 'No live source returned specific named-player injury evidence for this run.');
   const h2hEvidence = firstEvidenceText(evidenceItems, ['head_to_head', 'fixture_status'], 'No live source returned specific H2H score evidence for this run.');
   const newsEvidence = firstEvidenceText(evidenceItems, ['capital_commercial_political_news'], 'No live source returned specific capital/commercial/political news evidence for this run.');
   const oddsEvidence = firstEvidenceText(evidenceItems, ['odds_market'], oddsRead);
-  const tacticalEvidence = firstEvidenceText(evidenceItems, ['tactical_matchup'], '') || openaiWebRead || chatgptRead || geminiRead || 'No connected source returned a specific tactical matchup note for this run.';
+  const tacticalEvidence = firstEvidenceText(evidenceItems, ['tactical_matchup'], '') || qwenRead || openaiWebRead || chatgptRead || geminiRead || 'No connected source returned a specific tactical matchup note for this run.';
 
 
 
@@ -8651,6 +8693,7 @@ export default async function handler(req, res) {
 
 
 
+  if (apiKeys.qwen) addJob('qwen', () => getQwenContext(apiKeys.qwen, home_team, away_team, apiKeys.qwenModel));
   if (apiKeys.gemini) addJob('gemini', () => getGeminiContext(apiKeys.gemini, home_team, away_team));
 
 
