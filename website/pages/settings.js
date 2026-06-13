@@ -254,6 +254,8 @@ export default function Settings() {
 
 
   const [testStatus, setTestStatus] = useState({});
+  const [migrationText, setMigrationText] = useState('');
+  const [migrationStatus, setMigrationStatus] = useState('');
 
 
 
@@ -480,6 +482,40 @@ export default function Settings() {
 
 
 
+  const exportApiConfig = () => {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      apiKeys,
+      weights,
+    };
+    setMigrationText(JSON.stringify(payload, null, 2));
+    setMigrationStatus('API configuration exported. Copy this JSON into the China server settings page, then import.');
+  };
+
+  const importApiConfig = () => {
+    try {
+      const payload = JSON.parse(migrationText || '{}');
+      const nextKeys = payload.apiKeys || payload.keys || payload;
+      const nextWeights = payload.weights || null;
+      setApiKeys({ ...apiDefaults, ...nextKeys });
+      localStorage.setItem('apiKeys', JSON.stringify({ ...apiDefaults, ...nextKeys }));
+      if (nextWeights) {
+        setWeights({ ...weightDefaults, ...nextWeights });
+        localStorage.setItem('modelSettings', JSON.stringify({ ...weightDefaults, ...nextWeights }));
+      }
+      setMigrationStatus('Imported successfully. Keys are now stored for this browser and domain.');
+    } catch (error) {
+      setMigrationStatus('Import failed: ' + error.message);
+    }
+  };
+
+  const clearApiConfig = () => {
+    setApiKeys(apiDefaults);
+    localStorage.removeItem('apiKeys');
+    setMigrationStatus('API keys cleared on this browser.');
+  };
+
   const save = () => {
 
 
@@ -664,7 +700,37 @@ export default function Settings() {
 
 
 
+          </section>          <section className="mt-6 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-white">API configuration migration</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-400">
+                Browser-stored API keys are separated by domain. Use this panel to move keys from localhost or Vercel to the China server without committing secrets to GitHub.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
+              <textarea
+                value={migrationText}
+                onChange={(event) => setMigrationText(event.target.value)}
+                rows={7}
+                placeholder="Paste exported API configuration JSON here"
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-3 font-mono text-sm text-slate-100 outline-none transition focus:border-emerald-400"
+              />
+              <div className="flex flex-col gap-3">
+                <button type="button" onClick={exportApiConfig} className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 font-bold text-emerald-100 transition hover:bg-emerald-400/20">
+                  Export current keys
+                </button>
+                <button type="button" onClick={importApiConfig} className="rounded-md bg-white px-5 py-3 font-bold text-slate-950 transition hover:bg-emerald-200">
+                  Import pasted keys
+                </button>
+                <button type="button" onClick={clearApiConfig} className="rounded-md border border-red-400/30 px-5 py-3 font-bold text-red-200 transition hover:bg-red-400/10">
+                  Clear browser keys
+                </button>
+              </div>
+            </div>
+            {migrationStatus && <div className="mt-4 rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-100">{migrationStatus}</div>}
           </section>
+
+          
 
 
 

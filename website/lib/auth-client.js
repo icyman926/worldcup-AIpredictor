@@ -3,6 +3,8 @@ export const USER_KEY = 'wc_user';
 export const USERS_KEY = 'wc_registered_users';
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
+export const OWNER_EMAIL = 'owner@worldcup.ai';
+export const OWNER_PASSWORD = 'owner2026';
 
 function isBrowser() {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
@@ -112,11 +114,16 @@ export function getAuthState() {
 export function createOwnerUser() {
   return {
     username: 'Owner',
-    email: 'owner@local.dev',
-    password: 'Owner2026!',
+    email: OWNER_EMAIL,
+    password: OWNER_PASSWORD,
     dateOfBirth: '1990-01-01',
     ageVerified: true,
     plan: 'Owner',
+    role: 'owner',
     createdAt: new Date().toISOString(),
   };
+}
+
+export function isOwnerCredentials(email, password) {
+  return normalizeEmail(email) === OWNER_EMAIL && String(password || '') === OWNER_PASSWORD;
 }

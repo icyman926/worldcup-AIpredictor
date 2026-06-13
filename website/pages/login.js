@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
-import { createOwnerUser, findRegisteredUser, getAuthState, setAuthSession } from '../lib/auth-client';
+import { createOwnerUser, findRegisteredUser, getAuthState, isOwnerCredentials, setAuthSession } from '../lib/auth-client';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,6 +25,12 @@ export default function Login() {
   const handleLogin = (event) => {
     event.preventDefault();
     setError('');
+
+    if (isOwnerCredentials(email, password)) {
+      setAuthSession(createOwnerUser());
+      goNext();
+      return;
+    }
 
     const user = findRegisteredUser(email) || getAuthState().user;
 
@@ -55,7 +61,7 @@ export default function Login() {
           <div className="mb-8 text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Member workspace</p>
             <h1 className="mt-3 text-4xl font-bold text-white">Welcome back</h1>
-            <p className="mt-3 text-slate-400">Register once on this browser. Your 18+ access stays remembered for future visits unless browser data is cleared.</p>
+            <p className="mt-3 text-slate-400">Register once on this browser. Your 18+ access stays remembered for future visits unless browser data is cleared. Owner access is available on every deployment.</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
