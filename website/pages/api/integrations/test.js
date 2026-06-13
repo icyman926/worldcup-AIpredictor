@@ -1,3 +1,40 @@
+function describeProviderNetworkError(error) {
+  const message = String(error?.message || error || 'Unknown provider error');
+  if (/aborted|timeout/i.test(message)) {
+    return 'Server-side request timed out. Browser VPN does not change China server egress.';
+  }
+  if (/fetch failed|ECONNRESET|ETIMEDOUT|ENETUNREACH|ECONNREFUSED|CONNECT_TIMEOUT|UND_ERR/i.test(message)) {
+    return 'Server-side network failed. This request is made from the deployed server, not from your browser IP.';
+  }
+  return message;
+}
+
+async function fetchText(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error('timeout after ' + timeoutMs + 'ms')), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const text = await response.text();
+    return { response, text };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function ok(detail, extra = {}) {
+  return { ok: true, detail, ...extra };
+}
+
+function fail(error, extra = {}) {
+  return {
+    ok: false,
+    error: describeProviderNetworkError(error),
+    raw_error: String(error?.message || error || ''),
+    server_side: true,
+    ...extra,
+  };
+}
+
 async function testGemini(apiKey) {
 
 
