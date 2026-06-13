@@ -8,8 +8,39 @@ function isChinaLocale() {
 
 function synthesisLanguageInstruction() {
   return isChinaLocale()
-    ? 'All user-facing synthesis fields must be written in Simplified Chinese. Keep provider names, team names, model names, URLs, percentages, and API names unchanged. Do not mix English section explanations unless they are proper nouns or source titles.'
+    ? '所有面向用户的最终综合解析必须使用简体中文。不要直接复制英文 provider context；必须把英文材料翻译并归纳为中文。球队名、模型名、API 名、百分比和来源标题可以保留原文。不要输出英文说明句。'
     : 'All user-facing synthesis fields must be written in English.';
+}
+
+function cnText(text) {
+  const value = publicReasoningText(text || '', 3000);
+  if (!isChinaLocale()) return value;
+  return value
+    .replace(/The forecast starts from the baseline Elo and Poisson model, then adds a live-context ensemble across the connected APIs\.?/gi, '预测先以 Elo 强度和 Poisson 进球分布作为基础，再融合已连接 API 的实时上下文。')
+    .replace(/The current successful-provider average adjusts the baseline by/gi, '当前成功返回的数据源对基础概率的平均修正为')
+    .replace(/That creates a small contextual lean toward ([^,]+), but not enough to treat the match as one-sided\.?/gi, '这形成了对 $1 的小幅上下文倾向，但不足以把比赛判断为单边。')
+    .replace(/That keeps the match in a close range rather than creating a strong one-sided call\.?/gi, '这说明比赛仍处于接近区间，并没有形成强单边判断。')
+    .replace(/Dimension review:/gi, '维度解析：')
+    .replace(/Player status\/injuries:/gi, '球员状态与伤病：')
+    .replace(/Qualitative context:/gi, '定性上下文：')
+    .replace(/Locker-room\/team dynamics:/gi, '更衣室与团队动态：')
+    .replace(/Capital\/commercial\/political context:/gi, '资本、商业和政治因素：')
+    .replace(/Head-to-head\/history:/gi, '交锋历史：')
+    .replace(/Tactical matchup:/gi, '战术打法与对位：')
+    .replace(/Odds\/market:/gi, '盘口和市场信号：')
+    .replace(/No live source returned specific named-player injury evidence for this run\.?/gi, '本场暂未返回具体具名球员伤病证据。')
+    .replace(/No live source returned specific capital\/commercial\/political news evidence for this run\.?/gi, '本场暂未返回具体资本、商业或政治新闻证据。')
+    .replace(/No live source returned specific H2H score evidence for this run\.?/gi, '本场暂未返回具体交锋比分证据。')
+    .replace(/OpenAI Web Research was attempted but did not return usable source-backed evidence/gi, 'OpenAI Web Research 已尝试调用，但没有返回可用的来源证据')
+    .replace(/Fixture matched in Football-Data\.org/gi, 'Football-Data.org 匹配到赛程')
+    .replace(/Matched H2H market/gi, '匹配到交锋盘口市场')
+    .replace(/No-vig probabilities/gi, '去水后概率')
+    .replace(/home/gi, '主队')
+    .replace(/draw/gi, '平局')
+    .replace(/away/gi, '客队')
+    .replace(/Status: TIMED/gi, '状态：未开赛')
+    .replace(/Score: ---/gi, '比分：暂无')
+    .replace(/Teams:/gi, '球队：');
 }
 
 
@@ -5472,11 +5503,11 @@ function buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed = {})
     headline: parsed.headline && !/^final probability rationale$/i.test(parsed.headline)
       ? parsed.headline
       : homeTeam + ' vs ' + awayTeam + ' 概率推理总结',
-    probability_rationale: publicReasoningText(rationale, 12000),
+    probability_rationale: cnText(rationale),
     key_factors: [
       {
         factor: 'API 来源审计',
-        read: connected ? '成功接入：' + connected + '。DeepSeek V4 Pro 作为最终综合层。' : '没有实时上下文来源返回可用信号。',
+        read: cnText(connected ? '成功接入：' + connected + '。DeepSeek V4 Pro 作为最终综合层。' : '没有实时上下文来源返回可用信号。'),
         impact: '确认哪些来源参与了本次集成判断。',
       },
       {
@@ -5486,37 +5517,37 @@ function buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed = {})
       },
       {
         factor: '球员状态与伤病',
-        read: publicReasoningText(injuryEvidence, 900),
+        read: cnText(injuryEvidence),
         impact: injuryEvidence.includes('暂未') ? '暂无具名球员证据，保持谨慎。' : '已纳入具名球员状态证据。',
       },
       {
         factor: '更衣室与团队动态',
-        read: publicReasoningText(qualitativeRead, 900),
+        read: cnText(qualitativeRead),
         impact: '作为软信号参与修正，但不会被当作内幕消息。',
       },
       {
         factor: '资本、商业和政治因素',
-        read: publicReasoningText(newsEvidence, 900),
+        read: cnText(newsEvidence),
         impact: newsEvidence.includes('暂未') ? '无具体新闻证据时保持中性。' : '具体新闻证据进入风险/动机评估。',
       },
       {
         factor: '交锋历史',
-        read: publicReasoningText(h2hEvidence, 900),
+        read: cnText(h2hEvidence),
         impact: h2hEvidence.includes('暂未') ? '无具体交锋证据时不强行加权。' : '已纳入具体交锋或赛程证据。',
       },
       {
         factor: '战术打法与对位优势',
-        read: publicReasoningText(tacticalEvidence, 900),
+        read: cnText(tacticalEvidence),
         impact: tacticalEvidence.includes('暂未') ? '战术证据不足时谨慎处理。' : '战术/对位信息已进入定性修正。',
       },
       {
         factor: '盘口和市场信号',
-        read: publicReasoningText(oddsEvidence, 900),
+        read: cnText(oddsEvidence),
         impact: odds ? '市场信号作为集成输入之一。' : '没有匹配盘口时保持中性。',
       },
       {
         factor: '场地、旅行和压力',
-        read: publicReasoningText(dataRead, 900),
+        read: cnText(dataRead),
         impact: Math.abs(avg.home) > 0.003 || Math.abs(avg.away) > 0.003 ? '形成小幅上下文修正。' : '整体接近中性。',
       },
       {
@@ -5933,6 +5964,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
     'Use user-facing football analysis in the values: injuries, squad depth, team dynamics, odds signal, venue/travel, political or capital uncertainty, and data quality.',
+    isChinaLocale() ? 'For Chinese locale, translate and summarize all provider evidence into Chinese. Do not paste English provider sentences into probability_rationale, key_factors, uncertainty_notes, or data_basis.' : '',
 
 
 
@@ -6330,7 +6362,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
 
-    probability_rationale: enriched.probability_rationale || buildReasoningSummary(homeTeam, awayTeam, contexts, enriched).probability_rationale,
+    probability_rationale: cnText(enriched.probability_rationale || buildReasoningSummary(homeTeam, awayTeam, contexts, enriched).probability_rationale),
 
 
 
@@ -6338,12 +6370,12 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
 
-    uncertainty_notes: enriched.uncertainty_notes || 'Live API coverage can vary by fixture. This is football analytics and probability research only, not betting advice.',
+    uncertainty_notes: cnText(enriched.uncertainty_notes || (isChinaLocale() ? '实时 API 覆盖会因比赛和供应商权限变化。本产品仅用于足球分析和概率研究，不构成投注建议。' : 'Live API coverage can vary by fixture. This is football analytics and probability research only, not betting advice.')),
 
 
 
     evidence_items: Array.isArray(enriched.evidence_items) ? enriched.evidence_items.slice(0, 24) : collectEvidenceItems(contexts),
-    data_basis: enriched.data_basis || 'Elo and Poisson baseline, averaged live provider context, odds market signal when matched, and connected evidence sources when available.',
+    data_basis: cnText(enriched.data_basis || (isChinaLocale() ? 'Elo 和 Poisson 基础模型、实时上下文平均修正、匹配盘口信号以及可用的数据源证据。' : 'Elo and Poisson baseline, averaged live provider context, odds market signal when matched, and connected evidence sources when available.')),
 
 
 
