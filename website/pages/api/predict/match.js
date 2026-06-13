@@ -1,6 +1,29 @@
 import { IntegratedPredictor } from '../../../lib/predictor';
 import { applyLiveMatchContext } from '../../../lib/live-model';
 
+const SITE_LOCALE = process.env.NEXT_PUBLIC_SITE_LOCALE || '';
+
+function isChinaLocale() {
+  return /^zh/i.test(SITE_LOCALE);
+}
+
+function contextNotesForDisplay(contexts, synthesis) {
+  if (isChinaLocale()) {
+    if (synthesis?.probability_rationale) return [synthesis.probability_rationale];
+    const connected = Array.isArray(contexts) && contexts.length
+      ? contexts.map((item) => item.provider + (item.model ? ' / ' + item.model : '')).join(', ')
+      : '暂无成功返回的数据源';
+    return ['已连接数据源：' + connected + '。系统已按 Elo、Poisson、盘口信号和实时上下文进行综合修正。本产品仅用于足球概率研究，不构成投注建议。'];
+  }
+  return Array.isArray(contexts) && contexts.length
+    ? contexts.map((item) => item.summary || item.provider + ' context applied.')
+    : ['No successful live model context was supplied to this prediction.'];
+}
+
+function aggregationLabel() {
+  return isChinaLocale() ? '成功数据源的平均上下文修正' : 'Average of successful live model contexts';
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -40,8 +63,9 @@ function applyExternalContext(result, contexts, meta = {}) {
         attempted,
         failed,
         applied: false,
-        aggregation: 'No live model context applied',
-        notes: ['No successful live model context was supplied to this prediction.'],
+        aggregation: isChinaLocale() ? '未应用实时模型上下文' : 'No live model context applied',
+
+        notes: contextNotesForDisplay([], synthesis),
         adjustments: { home: 0, draw: 0, away: 0 },
         synthesis,
       },
@@ -73,8 +97,9 @@ function applyExternalContext(result, contexts, meta = {}) {
       attempted: attempted.length ? attempted : contexts.map((item) => item.provider),
       failed,
       applied: true,
-      aggregation: 'Average of successful live model contexts',
-      notes: contexts.map((item) => item.summary || item.provider + ' context applied.'),
+      aggregation: aggregationLabel(),
+
+      notes: contextNotesForDisplay(contexts, synthesis),
       adjustments: {
         home: Math.round(average.home * 10000) / 100,
         draw: Math.round(average.draw * 10000) / 100,

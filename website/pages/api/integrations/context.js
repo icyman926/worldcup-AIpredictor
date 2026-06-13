@@ -11,7 +11,6 @@ function synthesisLanguageInstruction() {
     ? '所有面向用户的最终综合解析必须使用简体中文。不要直接复制英文 provider context；必须把英文材料翻译并归纳为中文。球队名、模型名、API 名、百分比和来源标题可以保留原文。不要输出英文说明句。'
     : 'All user-facing synthesis fields must be written in English.';
 }
-
 function cnText(text) {
   const value = publicReasoningText(text || '', 3000);
   if (!isChinaLocale()) return value;
@@ -5565,6 +5564,7 @@ function buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed = {})
 
 function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
   if (isChinaLocale()) return buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed);
+  if (isChinaLocale()) return buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed);
 
   const count = Math.max(1, contexts.length);
 
@@ -5686,7 +5686,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
       : homeTeam + ' vs ' + awayTeam + ' probability reasoning summary',
 
-    probability_rationale: publicReasoningText(rationale, 12000),
+    probability_rationale: cnText(rationale),
 
     key_factors: [
 
@@ -5714,7 +5714,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
         factor: 'Player status and injuries',
 
-        read: publicReasoningText(injuryEvidence, 900),
+        read: cnText(injuryEvidence),
         impact: injuryEvidence.includes('No live source') ? 'Specific player-status evidence unavailable' : 'Named player-status evidence included',
 
       },
@@ -5733,7 +5733,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
         factor: 'Capital, commercial, and political context',
 
-        read: publicReasoningText(newsEvidence, 900),
+        read: cnText(newsEvidence),
         impact: newsEvidence.includes('No live source') ? 'Neutral without specific news evidence' : 'Specific news evidence listed for review',
 
       },
@@ -5742,7 +5742,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
         factor: 'Head-to-head and historical pattern',
 
-        read: publicReasoningText(h2hEvidence, 900),
+        read: cnText(h2hEvidence),
         impact: h2hEvidence.includes('No live source') ? 'Specific H2H evidence unavailable' : 'Specific fixture/H2H evidence included',
 
       },
@@ -5751,7 +5751,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
         factor: 'Tactical style and matchup advantages',
 
-        read: publicReasoningText(tacticalEvidence, 900),
+        read: cnText(tacticalEvidence),
         impact: tacticalEvidence.includes('No connected source') ? 'Specific tactical evidence unavailable' : 'Tactical source context included',
 
       },
@@ -5760,7 +5760,7 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 
         factor: 'Odds and market signal',
 
-        read: publicReasoningText(oddsEvidence, 900),
+        read: cnText(oddsEvidence),
         impact: odds ? 'Market signal included as one ensemble input' : 'Neutral without a matching market',
 
       },
@@ -5797,6 +5797,23 @@ function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
 }
 
 
+
+function forceChineseSynthesis(homeTeam, awayTeam, contexts, currentSynthesis = null) {
+  const chinese = buildChineseReasoningSummary(homeTeam, awayTeam, contexts, currentSynthesis || {});
+  return sanitizeSynthesisForDisplay({
+    provider: currentSynthesis?.provider || 'system',
+    model: currentSynthesis?.model === 'deepseek-v4-pro' ? 'deepseek-v4-pro-cn' : 'cn-localized-synthesis',
+    role: 'final-synthesis',
+    headline: chinese.headline,
+    probability_rationale: chinese.probability_rationale,
+    key_factors: chinese.key_factors,
+    uncertainty_notes: chinese.uncertainty_notes,
+    evidence_items: Array.isArray(currentSynthesis?.evidence_items) && currentSynthesis.evidence_items.length
+      ? currentSynthesis.evidence_items
+      : chinese.evidence_items,
+    data_basis: chinese.data_basis,
+  });
+}
 
 function isGenericSynthesis(parsed) {
 
@@ -5956,6 +5973,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
     synthesisLanguageInstruction(),
+    synthesisLanguageInstruction(),
     'Return exactly one valid JSON object only. Never mention JSON, keys, schema, prompt, or provider-context instructions inside the values. The probability_rationale value can be 900 to 1600 words when evidence is rich; do not truncate the reasoning.',
 
 
@@ -5964,6 +5982,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
     'Use user-facing football analysis in the values: injuries, squad depth, team dynamics, odds signal, venue/travel, political or capital uncertainty, and data quality.',
+    isChinaLocale() ? 'For Chinese locale, translate and summarize all provider evidence into Chinese. Do not paste English provider sentences into probability_rationale, key_factors, uncertainty_notes, or data_basis.' : '',
     isChinaLocale() ? 'For Chinese locale, translate and summarize all provider evidence into Chinese. Do not paste English provider sentences into probability_rationale, key_factors, uncertainty_notes, or data_basis.' : '',
 
 
@@ -8464,7 +8483,11 @@ export default async function handler(req, res) {
 
     if (synthesis) synthesis = sanitizeSynthesisForDisplay(synthesis);
 
-    res.status(200).json({
+    if (isChinaLocale() && contexts.length > 0) {
+    synthesis = forceChineseSynthesis(home_team, away_team, contexts, synthesis);
+  }
+
+  res.status(200).json({
 
 
 
