@@ -2453,7 +2453,7 @@ async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_M
       { role: 'user', content: buildContextPrompt(homeTeam, awayTeam) },
     ],
     temperature: 0.15,
-    max_tokens: 700,
+    max_tokens: 1200,
     response_format: { type: 'json_object' },
   };
 
@@ -2465,7 +2465,7 @@ async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_M
         Authorization: 'Bearer ' + apiKey,
       },
       body: JSON.stringify(payload),
-    }, 20000);
+    }, 60000);
     if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + text.slice(0, 300));
     const data = JSON.parse(text);
     const output = data?.choices?.[0]?.message?.content || '';
@@ -2474,6 +2474,96 @@ async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_M
     throw new Error('Qwen ' + selectedModel + ' request failed: ' + explainNetworkError(error));
   }
 }
+
+
+function buildQwenEvidencePrompt(homeTeam, awayTeam, contexts) {
+  const contextPacket = contexts.map((item) => ({
+    provider: item.provider,
+    model: item.model,
+    signal: item.signal,
+    summary: item.summary,
+    home_adjustment: item.home_adjustment,
+    draw_adjustment: item.draw_adjustment,
+    away_adjustment: item.away_adjustment,
+    confidence_delta: item.confidence_delta,
+    evidence_items: Array.isArray(item.evidence_items) ? item.evidence_items.slice(0, 8) : [],
+  }));
+
+  return [
+    '你是世界杯足球概率研究平台的中文证据综合模型。',
+    '任务：只基于下面已经由 API 或新闻源返回的 provider contexts，整理 ' + homeTeam + ' vs ' + awayTeam + ' 的实时证据摘要，并给出谨慎概率修正。',
+    '必须覆盖这些维度：球员状态与伤病、更衣室/团队动态、战术打法与对位、近期状态/阵容深度、资本/商业/政治新闻、盘口市场、赛程/场地/旅行压力、数据质量限制。',
+    '如果某个维度没有返回具名球员、具体新闻、真实比分或明确来源，请直接写“未返回具体证据”，不要编造。',
+    '保留球队名、模型名、API 名、百分比、日期、来源标题；不要输出投注建议、盈利承诺或内幕判断。',
+    '返回严格 JSON，字段：summary, signal, home_adjustment, draw_adjustment, away_adjustment, confidence_delta, evidence_items。',
+    'evidence_items 必须是 6 到 10 个对象，每个对象字段：category, source, detail, impact。',
+    'category 只能使用：player_status_injury, locker_room_team_dynamics, tactical_matchup, recent_form_squad_depth, capital_commercial_political_news, odds_market, fixture_status, data_quality。',
+    'home_adjustment/draw_adjustment/away_adjustment 范围 -0.03 到 0.03，confidence_delta 范围 -3 到 3。',
+    'Provider contexts JSON:',
+    JSON.stringify(contextPacket).slice(0, 24000),
+  ].join('\n');
+}
+
+async function getQwenEvidenceSynthesis(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_MODEL, contexts = []) {
+  const selectedModel = model || QWEN_DEFAULT_MODEL;
+  const payload = {
+    model: selectedModel,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是一个中文足球概率研究证据综合模型。',
+          '你只能使用用户提供的 provider contexts，不要编造实时事实。',
+          '所有面向用户的 summary、detail、impact 必须使用简体中文。',
+          '必须返回严格 JSON，不要 Markdown，不要额外解释。',
+          '产品定位是 football analytics / probability research，不是投注建议。',
+        ].join(' '),
+      },
+      { role: 'user', content: buildQwenEvidencePrompt(homeTeam, awayTeam, contexts) },
+    ],
+    temperature: 0.1,
+    max_tokens: 1800,
+    response_format: { type: 'json_object' },
+  };
+
+  try {
+    const { response, text } = await fetchText('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + apiKey,
+      },
+      body: JSON.stringify(payload),
+    }, 75000);
+    if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + text.slice(0, 300));
+    const data = JSON.parse(text);
+    const output = data?.choices?.[0]?.message?.content || '';
+    const parsed = parseJsonText(output);
+    const evidenceItems = Array.isArray(parsed.evidence_items)
+      ? parsed.evidence_items.map((item) => ({
+        category: item.category || 'data_quality',
+        source: item.source || 'Qwen evidence synthesis',
+        detail: item.detail || item.summary || '',
+        impact: item.impact || '作为实时证据综合输入，谨慎影响概率修正。',
+      })).filter((item) => item.detail).slice(0, 10)
+      : [];
+
+    return providerContext(
+      'qwen',
+      selectedModel + '-evidence-synthesis',
+      parsed.summary || '千问已基于成功返回的数据源完成中文实时证据综合。',
+      parsed.home_adjustment,
+      parsed.draw_adjustment,
+      parsed.away_adjustment,
+      parsed.confidence_delta,
+      parsed.signal || 'directional',
+      evidenceItems
+    );
+  } catch (error) {
+    throw new Error('Qwen evidence synthesis failed: ' + explainNetworkError(error));
+  }
+}
+
 
 async function getGeminiContext(apiKey, homeTeam, awayTeam) {
 
@@ -5557,7 +5647,7 @@ function buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed = {})
     ].slice(0, 10),
     uncertainty_notes: '实时 API 覆盖会因比赛、地区和供应商权限变化。本产品仅用于足球分析和概率研究，不构成投注建议。',
     evidence_items: evidenceItems,
-    data_basis: publicReasoningText('数据依据：Elo/Poisson 基础模型、已连接 API 的平均上下文修正、可匹配盘口信号、Football-Data 赛程状态、Sportmonks/API-Football 可用时的球员和交锋证据、Qwen/DeepSeek 等模型整理出的公开上下文。', 3000),
+    data_basis: publicReasoningText('数据依据：Elo/Poisson 基础模型、已连接 API 的平均上下文修正、可匹配盘口信号、Football-Data 赛程状态、Sportmonks/API-Football 可用时的球员和交锋证据，以及 Qwen 对已返回实时证据的中文综合整理。未返回来源的伤病、更衣室或资本政治信息不会被编造。', 3000),
   };
 }
 
@@ -9153,6 +9243,32 @@ export default async function handler(req, res) {
 
 
   const contexts = settled.filter((item) => item.status === 'fulfilled').map((item) => item.value);
+
+  if (apiKeys.qwen && isChinaLocale() && contexts.length > 0) {
+    try {
+      const qwenEvidence = await getQwenEvidenceSynthesis(apiKeys.qwen, home_team, away_team, apiKeys.qwenModel, contexts);
+      const qwenIndex = contexts.findIndex((item) => item.provider === 'qwen');
+      if (qwenIndex >= 0) contexts[qwenIndex] = qwenEvidence;
+      else contexts.unshift(qwenEvidence);
+    } catch (error) {
+      contexts.unshift(providerContext(
+        'qwen',
+        (apiKeys.qwenModel || QWEN_DEFAULT_MODEL) + '-evidence-synthesis',
+        '千问二轮证据综合未成功返回；本次继续使用其它成功数据源。原因：' + explainNetworkError(error),
+        0,
+        0,
+        0,
+        0,
+        'neutral',
+        [{
+          category: 'data_quality',
+          source: 'Qwen evidence synthesis',
+          detail: '千问二轮证据综合未成功返回；请检查模型额度、网络稳定性或稍后重试。',
+          impact: '本次不把千问作为概率移动依据，只显示数据质量提示。',
+        }]
+      ));
+    }
+  }
 
 
 
