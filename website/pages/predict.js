@@ -646,6 +646,13 @@ export default function Predict() {
   }, [autoLiveEnabled, homeTeam, awayTeam, apiKeys]);
 
   useEffect(() => {
+    if (!autoLiveEnabled || !homeTeam || !awayTeam || homeTeam === awayTeam) return undefined;
+    fetchLiveSnapshot();
+    const timer = setInterval(fetchLiveSnapshot, 120000);
+    return () => clearInterval(timer);
+  }, [autoLiveEnabled, homeTeam, awayTeam, apiKeys]);
+
+  useEffect(() => {
 
 
 

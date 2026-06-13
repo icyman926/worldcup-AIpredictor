@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import { clearAuthSession, getAuthState } from '../lib/auth-client';
+import ChineseLocalizer from './ChineseLocalizer';
 
 const publicPaths = ['/', '/login', '/register', '/admin-login'];
 
@@ -51,6 +52,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-white">
+      <ChineseLocalizer />
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3 text-lg font-bold tracking-tight text-white">
