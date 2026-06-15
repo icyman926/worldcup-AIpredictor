@@ -5535,8 +5535,12 @@ function strongestProviderRead(contexts) {
 
 
 function buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
-  const count = Math.max(1, contexts.length);
-  const totals = contexts.reduce((acc, item) => ({
+  const usableContexts = (Array.isArray(contexts) ? contexts : []).filter((item) => {
+    const text = String(item?.summary || '') + ' ' + String(item?.model || '');
+    return !/evidence synthesis failed|未成功返回|fetch failed|ETIMEDOUT|ECONNRESET|HTTP 429|data request unavailable provider connection unavailable|This operation was aborted/i.test(text);
+  });
+  const count = Math.max(1, usableContexts.length);
+  const totals = usableContexts.reduce((acc, item) => ({
     home: acc.home + (Number(item.home_adjustment) || 0),
     draw: acc.draw + (Number(item.draw_adjustment) || 0),
     away: acc.away + (Number(item.away_adjustment) || 0),
@@ -5550,115 +5554,67 @@ function buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed = {})
     confidence: totals.confidence / count,
   };
 
-  const qwen = getProviderContext(contexts, 'qwen');
-  const gemini = getProviderContext(contexts, 'gemini');
-  const chatgpt = getProviderContext(contexts, 'chatgpt');
-  const openaiWeb = getProviderContext(contexts, 'openaiWebResearch');
-  const odds = getProviderContext(contexts, 'oddsApi');
-  const footballData = getProviderContext(contexts, 'footballData') || getProviderContext(contexts, 'apiFootball');
+  const evidenceItems = collectEvidenceItems(usableContexts);
+  const byCategory = (category) => evidenceItems.filter((item) => item.category === category);
+  const first = (categories, fallback) => {
+    const item = evidenceItems.find((entry) => categories.includes(entry.category));
+    return item ? [item.source, item.detail, item.impact].filter(Boolean).join('：') : fallback;
+  };
+  const providerLine = usableContexts.length
+    ? usableContexts.map((item) => item.provider + (item.model ? ' / ' + item.model : '')).join(', ')
+    : '暂无成功返回的数据源';
 
-  const qwenRead = publicProviderSummary(qwen?.summary);
-  const geminiRead = publicProviderSummary(gemini?.summary);
-  const chatgptRead = publicProviderSummary(chatgpt?.summary);
-  const openaiWebRead = publicProviderSummary(openaiWeb?.summary);
-  const oddsRead = publicProviderSummary(odds?.summary) || '没有匹配到强盘口信号，市场层保持接近中性。';
-  const dataRead = publicProviderSummary(footballData?.summary) || '赛程和历史数据确认有限，数据层不额外制造强倾向。';
-  const qualitativeRead = [qwenRead, openaiWebRead, geminiRead, chatgptRead].filter(Boolean).join(' ') || strongestProviderRead(contexts) || '定性模型上下文有限，因此球队新闻、更衣室因素和临场状态按谨慎中性处理。';
+  const injury = first(['player_status_injury'], '未返回具体具名球员伤病证据，因此伤病维度不做强行加权。');
+  const dynamics = first(['locker_room_team_dynamics'], '未返回更衣室或团队内部动态的具体证据，因此只按中性软信号处理。');
+  const tactics = first(['tactical_matchup'], '未返回明确战术对位证据，因此只保留基础实力和盘口信号。');
+  const form = first(['recent_form_squad_depth'], '未返回近期状态或阵容深度的明确证据，因此该维度保持谨慎。');
+  const capitalNews = first(['capital_commercial_political_news'], '未返回可验证的资本、商业或政治新闻证据，因此不把该维度作为概率移动依据。');
+  const odds = first(['odds_market'], '未匹配到有效盘口市场，盘口维度保持中性。');
+  const fixture = first(['fixture_status'], '赛程、场地或比分状态证据有限，赛程层保持中性确认。');
+  const dataQuality = first(['data_quality'], '部分数据源可能超时、限流或权限不足；系统只使用成功返回的数据，不把失败来源纳入概率修正。');
+  const h2h = first(['head_to_head', 'fixture_status'], '未返回具体交锋比分证据，因此交锋历史不做强行加权。');
 
-  const evidenceItems = collectEvidenceItems(contexts);
-  const injuryEvidence = firstEvidenceText(evidenceItems, ['player_status_injury'], '本场暂未返回具体具名球员伤病证据。');
-  const h2hEvidence = firstEvidenceText(evidenceItems, ['head_to_head', 'fixture_status'], '本场暂未返回具体交锋比分或历史对战证据。');
-  const newsEvidence = firstEvidenceText(evidenceItems, ['capital_commercial_political_news'], '本场暂未返回具体资本、商业或政治新闻证据。');
-  const oddsEvidence = firstEvidenceText(evidenceItems, ['odds_market'], oddsRead);
-  const tacticalEvidence = firstEvidenceText(evidenceItems, ['tactical_matchup'], '') || qwenRead || openaiWebRead || chatgptRead || geminiRead || '本场暂未返回具体战术对位证据。';
+  const lean = avg.home > 0.004 ? homeTeam : avg.away > 0.004 ? awayTeam : '双方接近';
+  const leanSentence = lean === '双方接近'
+    ? '综合修正幅度较小，说明实时信息没有把比赛推向明显单边。'
+    : '实时上下文给 ' + lean + ' 带来小幅倾向，但幅度仍属于谨慎修正，不代表比赛已经失去悬念。';
 
-  const lean = avg.home > 0.004 ? homeTeam : avg.away > 0.004 ? awayTeam : '均衡';
-  const connected = contexts.map((item) => item.provider + (item.model ? ' / ' + item.model : '')).join(', ');
-
-  const dimensionSummary = [
-    '球员状态与伤病：' + injuryEvidence + ' 定性上下文：' + qualitativeRead,
-    '更衣室与团队动态：士气、阵容稳定性、教练压力、核心球员领导力和内部波动只在供应商证据支持时计入，否则保持谨慎。',
-    '资本、商业和政治因素：' + newsEvidence,
-    '交锋历史：' + h2hEvidence,
-    '战术打法与对位：' + tacticalEvidence,
-    '盘口和市场信号：' + oddsEvidence,
-    '赛程/场地/旅行压力：' + dataRead,
-  ].join(' ');
-
-  const rationale = [
-    connected ? '已接入并成功返回的上下文来源包括：' + connected + '。' : '本次没有实时上下文来源返回可用信号。',
-    '模型先以 Elo 强度和 Poisson 进球分布作为基础概率，再融合已连接 API 的实时上下文。',
-    '当前成功供应商的平均修正为：主队 ' + formatPct(avg.home) + '，平局 ' + formatPct(avg.draw) + '，客队 ' + formatPct(avg.away) + '。',
-    lean === '均衡'
-      ? '这说明模型没有得到足够证据把比赛推向单边判断，整体仍属于接近区间。'
-      : '这给 ' + lean + ' 带来小幅上下文倾向，但幅度不足以说明比赛已经单边化。',
-    '维度解析：' + dimensionSummary,
-    '结论仅用于足球概率研究和赛前/赛中报告，不是投注建议，也不承诺收益。',
-  ].join(' ');
+  const probabilityRationale = [
+    homeTeam + ' vs ' + awayTeam + ' 的预测先由 Elo 强度和 Poisson 进球分布给出基础胜平负结构，再把成功返回的实时数据源做平均修正。',
+    '本次真正参与计算的数据源包括：' + providerLine + '。',
+    '成功数据源的平均修正为：主队 ' + formatPct(avg.home) + '，平局 ' + formatPct(avg.draw) + '，客队 ' + formatPct(avg.away) + '。' + leanSentence,
+    '球员状态与伤病方面：' + injury,
+    '近期状态与阵容深度方面：' + form,
+    '更衣室和团队动态方面：' + dynamics,
+    '战术打法与对位方面：' + tactics,
+    '盘口和市场信号方面：' + odds,
+    '赛程、场地和旅行压力方面：' + fixture,
+    '交锋历史方面：' + h2h,
+    '资本、商业和政治因素方面：' + capitalNews,
+    '数据质量方面：' + dataQuality,
+    '因此，最终概率不是单一 AI 的主观判断，而是基础实力模型、进球分布、盘口市场、赛程状态、新闻证据和中文模型证据整理后的综合结果。结论仅用于足球概率研究和赛前/赛中分析报告，不是投注建议，也不承诺收益。',
+  ].join('\n\n');
 
   return {
-    headline: parsed.headline && !/^final probability rationale$/i.test(parsed.headline)
-      ? parsed.headline
-      : homeTeam + ' vs ' + awayTeam + ' 概率推理总结',
-    probability_rationale: cnText(rationale),
+    headline: homeTeam + ' vs ' + awayTeam + ' 最终概率解析',
+    probability_rationale: publicReasoningText(probabilityRationale, 14000),
     key_factors: [
-      {
-        factor: 'API 来源审计',
-        read: cnText(connected ? '成功接入：' + connected + '。DeepSeek V4 Pro 作为最终综合层。' : '没有实时上下文来源返回可用信号。'),
-        impact: '确认哪些来源参与了本次集成判断。',
-      },
-      {
-        factor: '基础强度模型',
-        read: 'Elo 和 Poisson 先生成基础胜平负概率，再由实时上下文进行小幅修正。',
-        impact: '决定主胜、平局、客胜的基础分布。',
-      },
-      {
-        factor: '球员状态与伤病',
-        read: cnText(injuryEvidence),
-        impact: injuryEvidence.includes('暂未') ? '暂无具名球员证据，保持谨慎。' : '已纳入具名球员状态证据。',
-      },
-      {
-        factor: '更衣室与团队动态',
-        read: cnText(qualitativeRead),
-        impact: '作为软信号参与修正，但不会被当作内幕消息。',
-      },
-      {
-        factor: '资本、商业和政治因素',
-        read: cnText(newsEvidence),
-        impact: newsEvidence.includes('暂未') ? '无具体新闻证据时保持中性。' : '具体新闻证据进入风险/动机评估。',
-      },
-      {
-        factor: '交锋历史',
-        read: cnText(h2hEvidence),
-        impact: h2hEvidence.includes('暂未') ? '无具体交锋证据时不强行加权。' : '已纳入具体交锋或赛程证据。',
-      },
-      {
-        factor: '战术打法与对位优势',
-        read: cnText(tacticalEvidence),
-        impact: tacticalEvidence.includes('暂未') ? '战术证据不足时谨慎处理。' : '战术/对位信息已进入定性修正。',
-      },
-      {
-        factor: '盘口和市场信号',
-        read: cnText(oddsEvidence),
-        impact: odds ? '市场信号作为集成输入之一。' : '没有匹配盘口时保持中性。',
-      },
-      {
-        factor: '场地、旅行和压力',
-        read: cnText(dataRead),
-        impact: Math.abs(avg.home) > 0.003 || Math.abs(avg.away) > 0.003 ? '形成小幅上下文修正。' : '整体接近中性。',
-      },
-      {
-        factor: '数据质量与不确定性',
-        read: '如果供应商超时、无权限或数据不完整，系统会把它处理为可见的不确定性，而不是隐藏提高置信度。',
-        impact: '让预测更保守、更透明。',
-      },
-    ].slice(0, 10),
-    uncertainty_notes: '实时 API 覆盖会因比赛、地区和供应商权限变化。本产品仅用于足球分析和概率研究，不构成投注建议。',
+      { factor: '基础概率模型', read: 'Elo 强度决定基础实力差，Poisson 进球分布决定比分和胜平负形状。', impact: '提供赛前基础概率，不依赖单一新闻或主观判断。' },
+      { factor: '成功数据源', read: providerLine, impact: '只把成功返回且可解析的数据纳入概率修正。' },
+      { factor: '球员状态与伤病', read: publicReasoningText(injury, 1200), impact: byCategory('player_status_injury').length ? '已纳入具体伤病/状态证据。' : '无具名证据时保持中性。' },
+      { factor: '近期状态与阵容深度', read: publicReasoningText(form, 1200), impact: byCategory('recent_form_squad_depth').length ? '已纳入状态和阵容深度。' : '无明确证据时不强行加权。' },
+      { factor: '更衣室与团队动态', read: publicReasoningText(dynamics, 1200), impact: byCategory('locker_room_team_dynamics').length ? '作为软信号参与修正。' : '缺少证据时保持谨慎。' },
+      { factor: '战术打法与对位', read: publicReasoningText(tactics, 1200), impact: byCategory('tactical_matchup').length ? '用于解释场面优势和风险。' : '没有具体对位证据时保持中性。' },
+      { factor: '盘口和市场信号', read: publicReasoningText(odds, 1200), impact: byCategory('odds_market').length ? '盘口去水后作为市场层输入。' : '无盘口时不移动市场层。' },
+      { factor: '赛程、场地和旅行压力', read: publicReasoningText(fixture, 1200), impact: byCategory('fixture_status').length ? '用于确认时间、地点和赛程状态。' : '信息不足时只做中性确认。' },
+      { factor: '交锋历史', read: publicReasoningText(h2h, 1200), impact: /未返回/.test(h2h) ? '无具体比分证据时不强行加权。' : '已纳入交锋/赛程证据。' },
+      { factor: '资本、商业和政治因素', read: publicReasoningText(capitalNews, 1200), impact: byCategory('capital_commercial_political_news').length ? '新闻证据进入风险和动机评估。' : '无可靠新闻证据时保持中性。' },
+    ],
+    uncertainty_notes: '实时 API 覆盖会受网络、限流、套餐权限和比赛热度影响。失败来源会显示为失败提示，但不会冒充成功数据源参与概率移动。',
     evidence_items: evidenceItems,
-    data_basis: publicReasoningText('数据依据：Elo/Poisson 基础模型、已连接 API 的平均上下文修正、可匹配盘口信号、Football-Data 赛程状态、Sportmonks/API-Football 可用时的球员和交锋证据，以及 Qwen 对已返回实时证据的中文综合整理。未返回来源的伤病、更衣室或资本政治信息不会被编造。', 3000),
+    data_basis: 'Elo/Poisson 基础模型、成功返回的 AI 上下文、盘口市场、赛程状态、新闻证据、可用的交锋/球员数据，以及数据质量限制。',
   };
 }
-
 
 function buildReasoningSummary(homeTeam, awayTeam, contexts, parsed = {}) {
   if (isChinaLocale()) return buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed);
@@ -6451,7 +6407,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
 
-  const enriched = isGenericSynthesis(parsed) ? buildReasoningSummary(homeTeam, awayTeam, contexts, parsed) : parsed;
+  const enriched = isChinaLocale() ? buildChineseReasoningSummary(homeTeam, awayTeam, contexts, parsed) : (isGenericSynthesis(parsed) ? buildReasoningSummary(homeTeam, awayTeam, contexts, parsed) : parsed);
 
 
 
@@ -6475,7 +6431,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
 
 
-    headline: enriched.headline || homeTeam + ' vs ' + awayTeam + ' probability reasoning summary',
+    headline: enriched.headline || (isChinaLocale() ? homeTeam + ' vs ' + awayTeam + ' 最终概率解析' : homeTeam + ' vs ' + awayTeam + ' probability reasoning summary'),
 
 
 
@@ -9251,6 +9207,7 @@ export default async function handler(req, res) {
 
 
   const contexts = settled.filter((item) => item.status === 'fulfilled').map((item) => item.value);
+  let qwenEvidenceError = null;
 
   if (apiKeys.qwen && isChinaLocale() && contexts.length > 0) {
     try {
@@ -9259,42 +9216,9 @@ export default async function handler(req, res) {
       if (qwenIndex >= 0) contexts[qwenIndex] = qwenEvidence;
       else contexts.unshift(qwenEvidence);
     } catch (error) {
-      contexts.unshift(providerContext(
-        'qwen',
-        (apiKeys.qwenModel || QWEN_DEFAULT_MODEL) + '-evidence-synthesis',
-        '千问二轮证据综合未成功返回；本次继续使用其它成功数据源。原因：' + explainNetworkError(error),
-        0,
-        0,
-        0,
-        0,
-        'neutral',
-        [{
-          category: 'data_quality',
-          source: 'Qwen evidence synthesis',
-          detail: '千问二轮证据综合未成功返回；请检查模型额度、网络稳定性或稍后重试。',
-          impact: '本次不把千问作为概率移动依据，只显示数据质量提示。',
-        }]
-      ));
+      qwenEvidenceError = explainNetworkError(error);
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   const errors = settled.filter((item) => item.status === 'rejected').map((item) => ({
 
@@ -9357,6 +9281,7 @@ export default async function handler(req, res) {
 
 
   }));
+  if (qwenEvidenceError) errors.push({ provider: 'qwenEvidence', error: qwenEvidenceError });
 
 
 
