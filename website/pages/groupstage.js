@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { GROUP_STAGES, WORLD_CUP_2026_TEAMS, getTeamById } from '../lib/predictor';
 
 const groups = GROUP_STAGES.map((group) => group.group);
+const BEIJING_TIME_ZONE = 'Asia/Shanghai';
 
 export default function GroupStage() {
   const [selectedGroup, setSelectedGroup] = useState('A');
@@ -56,8 +57,8 @@ export default function GroupStage() {
                 return (
                   <div key={match.id} className="grid gap-4 rounded-lg border border-white/10 bg-slate-900 p-4 md:grid-cols-[0.8fr_1.3fr_1.2fr_auto] md:items-center">
                     <div>
-                      <div className="text-sm text-slate-400">{formatDate(match.date)}</div>
-                      <div className="font-bold text-white">{match.time}</div>
+                      <div className="text-sm text-slate-400">{formatBeijingDate(match.date, match.time)}</div>
+                      <div className="font-bold text-white">{formatBeijingTime(match.date, match.time)} 北京时间</div>
                     </div>
                     <div className="flex items-center gap-3">
                       <TeamBadge team={team1} />
@@ -94,6 +95,24 @@ function TeamBadge({ team }) {
   );
 }
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+function parseUtcKickoff(dateStr, timeStr) {
+  return new Date(dateStr + 'T' + (timeStr || '00:00') + ':00Z');
+}
+
+function formatBeijingDate(dateStr, timeStr) {
+  return parseUtcKickoff(dateStr, timeStr).toLocaleDateString('zh-CN', {
+    timeZone: BEIJING_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+    weekday: 'short',
+  });
+}
+
+function formatBeijingTime(dateStr, timeStr) {
+  return parseUtcKickoff(dateStr, timeStr).toLocaleTimeString('zh-CN', {
+    timeZone: BEIJING_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 }

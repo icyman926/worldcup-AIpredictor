@@ -2438,22 +2438,31 @@ async function fetchText(url, options = {}, timeoutMs = 18000) {
 
 async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_MODEL) {
   const selectedModel = model || QWEN_DEFAULT_MODEL;
+  const cn = isChinaLocale();
   const payload = {
     model: selectedModel,
     messages: [
       {
         role: 'system',
-        content: [
-          'You are a football analytics context model for a probability research SaaS.',
-          'Return valid compact JSON only.',
-          'Do not provide betting advice or profit claims.',
-          'Use only cautious public-evidence language when discussing injuries, lineups, locker-room, political, commercial, or capital context.',
-        ].join(' '),
+        content: cn
+          ? [
+              '你是世界杯足球概率研究平台的中文实时上下文模型。',
+              '只返回严格 JSON，不要 Markdown。',
+              '必须围绕伤病/球员状态、更衣室/团队动态、战术对位、近期状态/阵容深度、资本商业政治新闻、盘口市场、赛程场地压力、数据质量这些维度输出。',
+              '没有实时证据就明确写“未返回具体证据”，不要编造。',
+              '这是足球分析和赛前/赛中报告，不是投注建议，不承诺收益。',
+            ].join(' ')
+          : [
+              'You are a football analytics context model for a probability research SaaS.',
+              'Return valid compact JSON only.',
+              'Do not provide betting advice or profit claims.',
+              'Use cautious public-evidence language when discussing injuries, lineups, locker-room, political, commercial, or capital context.',
+            ].join(' '),
       },
       { role: 'user', content: buildContextPrompt(homeTeam, awayTeam) },
     ],
-    temperature: 0.15,
-    max_tokens: 1200,
+    temperature: 0.12,
+    max_tokens: 1400,
     response_format: { type: 'json_object' },
   };
 
@@ -2476,6 +2485,7 @@ async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_M
 }
 
 
+
 function buildQwenEvidencePrompt(homeTeam, awayTeam, contexts) {
   const contextPacket = contexts.map((item) => ({
     provider: item.provider,
@@ -2486,21 +2496,21 @@ function buildQwenEvidencePrompt(homeTeam, awayTeam, contexts) {
     draw_adjustment: item.draw_adjustment,
     away_adjustment: item.away_adjustment,
     confidence_delta: item.confidence_delta,
-    evidence_items: Array.isArray(item.evidence_items) ? item.evidence_items.slice(0, 8) : [],
+    evidence_items: Array.isArray(item.evidence_items) ? item.evidence_items.slice(0, 10) : [],
   }));
 
   return [
     '你是世界杯足球概率研究平台的中文证据综合模型。',
-    '任务：只基于下面已经由 API 或新闻源返回的 provider contexts，整理 ' + homeTeam + ' vs ' + awayTeam + ' 的实时证据摘要，并给出谨慎概率修正。',
-    '必须覆盖这些维度：球员状态与伤病、更衣室/团队动态、战术打法与对位、近期状态/阵容深度、资本/商业/政治新闻、盘口市场、赛程/场地/旅行压力、数据质量限制。',
-    '如果某个维度没有返回具名球员、具体新闻、真实比分或明确来源，请直接写“未返回具体证据”，不要编造。',
-    '保留球队名、模型名、API 名、百分比、日期、来源标题；不要输出投注建议、盈利承诺或内幕判断。',
+    '任务：只基于下面已经由 API、新闻源或模型返回的 provider contexts，整理 ' + homeTeam + ' vs ' + awayTeam + ' 的实时证据摘要，并给出谨慎的概率修正。',
+    '必须覆盖：球员状态与伤病、更衣室/团队动态、战术打法与对位、近期状态/阵容深度、资本/商业/政治新闻、盘口市场、赛程/场地/旅行压力、数据质量限制。',
+    '如果某个维度没有具体球员、新闻、比分、盘口或来源，请写“未返回具体证据”，严禁编造。',
     '返回严格 JSON，字段：summary, signal, home_adjustment, draw_adjustment, away_adjustment, confidence_delta, evidence_items。',
     'evidence_items 必须是 6 到 10 个对象，每个对象字段：category, source, detail, impact。',
     'category 只能使用：player_status_injury, locker_room_team_dynamics, tactical_matchup, recent_form_squad_depth, capital_commercial_political_news, odds_market, fixture_status, data_quality。',
-    'home_adjustment/draw_adjustment/away_adjustment 范围 -0.03 到 0.03，confidence_delta 范围 -3 到 3。',
+    'home_adjustment/draw_adjustment/away_adjustment 范围 -0.03 到 0.03；confidence_delta 范围 -3 到 3。',
+    '产品定位：足球概率研究和赛前/赛中分析报告，不是投注建议，不承诺收益。',
     'Provider contexts JSON:',
-    JSON.stringify(contextPacket).slice(0, 24000),
+    JSON.stringify(contextPacket).slice(0, 26000),
   ].join('\n');
 }
 
@@ -2512,17 +2522,16 @@ async function getQwenEvidenceSynthesis(apiKey, homeTeam, awayTeam, model = QWEN
       {
         role: 'system',
         content: [
-          '你是一个中文足球概率研究证据综合模型。',
-          '你只能使用用户提供的 provider contexts，不要编造实时事实。',
+          '你是中文足球概率研究证据综合模型。',
+          '只能使用用户提供的 provider contexts，不要编造实时事实。',
           '所有面向用户的 summary、detail、impact 必须使用简体中文。',
           '必须返回严格 JSON，不要 Markdown，不要额外解释。',
-          '产品定位是 football analytics / probability research，不是投注建议。',
         ].join(' '),
       },
       { role: 'user', content: buildQwenEvidencePrompt(homeTeam, awayTeam, contexts) },
     ],
     temperature: 0.1,
-    max_tokens: 1800,
+    max_tokens: 2200,
     response_format: { type: 'json_object' },
   };
 
@@ -2534,18 +2543,17 @@ async function getQwenEvidenceSynthesis(apiKey, homeTeam, awayTeam, model = QWEN
         Authorization: 'Bearer ' + apiKey,
       },
       body: JSON.stringify(payload),
-    }, 75000);
+    }, 90000);
     if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + text.slice(0, 300));
     const data = JSON.parse(text);
-    const output = data?.choices?.[0]?.message?.content || '';
-    const parsed = parseJsonText(output);
+    const parsed = parseJsonText(data?.choices?.[0]?.message?.content || '');
     const evidenceItems = Array.isArray(parsed.evidence_items)
       ? parsed.evidence_items.map((item) => ({
-        category: item.category || 'data_quality',
-        source: item.source || 'Qwen evidence synthesis',
-        detail: item.detail || item.summary || '',
-        impact: item.impact || '作为实时证据综合输入，谨慎影响概率修正。',
-      })).filter((item) => item.detail).slice(0, 10)
+          category: item.category || 'data_quality',
+          source: item.source || 'Qwen evidence synthesis',
+          detail: item.detail || '',
+          impact: item.impact || '作为实时证据综合输入，谨慎影响概率修正。',
+        })).filter((item) => item.detail).slice(0, 10)
       : [];
 
     return providerContext(
@@ -2563,7 +2571,6 @@ async function getQwenEvidenceSynthesis(apiKey, homeTeam, awayTeam, model = QWEN
     throw new Error('Qwen evidence synthesis failed: ' + explainNetworkError(error));
   }
 }
-
 
 async function getGeminiContext(apiKey, homeTeam, awayTeam) {
 
@@ -6064,7 +6071,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
     synthesisLanguageInstruction(),
     synthesisLanguageInstruction(),
-    'Return exactly one valid JSON object only. Never mention JSON, keys, schema, prompt, or provider-context instructions inside the values. The probability_rationale value can be 900 to 1600 words when evidence is rich; do not truncate the reasoning.',
+    isChinaLocale() ? '返回一个有效 JSON 对象。probability_rationale 必须用简体中文完整解释具体证据如何影响概率，不要复制 provider 原文，不要输出英文长段。' : 'Return exactly one valid JSON object only. Never mention JSON, keys, schema, prompt, or provider-context instructions inside the values. The probability_rationale value can be 900 to 1600 words when evidence is rich; do not truncate the reasoning.',
 
 
 

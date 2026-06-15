@@ -211,27 +211,25 @@ class PoissonPredictor {
     return result;
   }
 
-  static calculateGoalsProbabilities(attackStrength, defenseWeakness, maxGoals = 5) {
-    const expectedGoals = attackStrength * defenseWeakness;
+  static calculateGoalsProbabilities(expectedGoals, maxGoals = 7) {
+    const lambda = Math.max(0.15, Math.min(5.0, Number(expectedGoals) || 0));
     const probabilities = [];
-    
+
     for (let k = 0; k <= maxGoals; k++) {
-      probabilities.push(this.poissonProbability(expectedGoals, k));
+      probabilities.push(this.poissonProbability(lambda, k));
     }
-    
-    const remaining = 1.0 - probabilities.reduce((a, b) => a + b, 0);
-    if (remaining > 0) probabilities[maxGoals] += remaining;
-    
-    return probabilities;
+
+    const total = probabilities.reduce((a, b) => a + b, 0);
+    return total > 0 ? probabilities.map((item) => item / total) : probabilities;
   }
 
-  static calculateMatchProbabilities(homeAttack, homeDefense, awayAttack, awayDefense, maxGoals = 5) {
-    const homeProbs = this.calculateGoalsProbabilities(homeAttack, awayDefense, maxGoals);
-    const awayProbs = this.calculateGoalsProbabilities(awayAttack, homeDefense, maxGoals);
-    
+  static calculateMatchProbabilities(homeExpectedGoals, awayExpectedGoals, maxGoals = 7) {
+    const homeProbs = this.calculateGoalsProbabilities(homeExpectedGoals, maxGoals);
+    const awayProbs = this.calculateGoalsProbabilities(awayExpectedGoals, maxGoals);
+
     let homeWin = 0, draw = 0, awayWin = 0;
     const scoreProbs = {};
-    
+
     for (let h = 0; h <= maxGoals; h++) {
       for (let a = 0; a <= maxGoals; a++) {
         const prob = homeProbs[h] * awayProbs[a];
@@ -241,13 +239,24 @@ class PoissonPredictor {
         else awayWin += prob;
       }
     }
-    
+
+    const total = homeWin + draw + awayWin;
+    if (total > 0) {
+      homeWin /= total;
+      draw /= total;
+      awayWin /= total;
+      Object.keys(scoreProbs).forEach((score) => {
+        scoreProbs[score] /= total;
+      });
+    }
+
     return { homeWin, draw, awayWin, scoreProbs };
   }
 
-  static getMostLikelyScores(scoreProbs, count = 5) {
-    const sorted = Object.entries(scoreProbs).sort((a, b) => b[1] - a[1]);
-    return sorted.slice(0, count);
+  static getMostLikelyScores(scoreProbs, count = 7) {
+    return Object.entries(scoreProbs)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, count);
   }
 }
 
@@ -299,10 +308,12 @@ class IntegratedPredictor {
     }
     
     const eloResult = EloSystem.predictMatch(homeElo * venueFactor, awayElo / venueFactor);
-    
-    const homeAttack = homeAvgGoals / 2.7;
-    const awayAttack = awayAvgGoals / 2.7;
-    const poissonResult = PoissonPredictor.calculateMatchProbabilities(homeAttack, homeAvgConceded, awayAttack, awayAvgConceded);
+    const goalClamp = (value) => Math.max(0.25, Math.min(3.8, value));
+    const eloGoalEdge = Math.max(-0.45, Math.min(0.45, (homeElo - awayElo) / 420));
+    const venueGoalEdge = venue === 'home' ? 0.18 : (venue === 'away' ? -0.18 : 0);
+    const homeExpectedGoals = goalClamp((homeAvgGoals * (awayAvgConceded / 1.15)) + eloGoalEdge + venueGoalEdge);
+    const awayExpectedGoals = goalClamp((awayAvgGoals * (homeAvgConceded / 1.15)) - eloGoalEdge - venueGoalEdge);
+    const poissonResult = PoissonPredictor.calculateMatchProbabilities(homeExpectedGoals, awayExpectedGoals, 7);
     
     let oddsHome = 0.333, oddsDraw = 0.334, oddsAway = 0.333;
     let margin = null;
@@ -331,7 +342,7 @@ class IntegratedPredictor {
     }
     
     const confidence = Math.min(95, 70 + Math.abs(finalHome - finalAway) * 50);
-    const mostLikelyScores = PoissonPredictor.getMostLikelyScores(poissonResult.scoreProbs, 5);
+    const mostLikelyScores = PoissonPredictor.getMostLikelyScores(poissonResult.scoreProbs, 7);
     
     return {
       home_team: homeTeam,
@@ -342,8 +353,8 @@ class IntegratedPredictor {
         away: Math.round(finalAway * 10000) / 100
       },
       expected_goals: {
-        home: Math.round((homeAttack * (awayAvgConceded / 2.7)) * 100) / 100,
-        away: Math.round((awayAttack * (homeAvgConceded / 2.7)) * 100) / 100
+        home: Math.round(homeExpectedGoals * 100) / 100,
+        away: Math.round(awayExpectedGoals * 100) / 100
       },
       confidence: Math.round(confidence * 100) / 100,
       most_likely_scores: mostLikelyScores.map(([score, prob]) => ({

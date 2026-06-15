@@ -8,16 +8,25 @@ function isChinaLocale() {
 }
 
 function contextNotesForDisplay(contexts, synthesis) {
+  const list = Array.isArray(contexts) ? contexts : [];
+  const connected = list.length
+    ? list.map((item) => item.provider + (item.model ? ' / ' + item.model : '')).join(', ')
+    : (isChinaLocale() ? '暂无成功返回的数据源' : 'No successful data sources');
+  const qwen = list.find((item) => item.provider === 'qwen');
+  const qwenEvidence = qwen && /evidence-synthesis/i.test(String(qwen.model || ''));
+
   if (isChinaLocale()) {
-    if (synthesis?.probability_rationale) return [synthesis.probability_rationale];
-    const connected = Array.isArray(contexts) && contexts.length
-      ? contexts.map((item) => item.provider + (item.model ? ' / ' + item.model : '')).join(', ')
-      : '暂无成功返回的数据源';
-    return ['已连接数据源：' + connected + '。系统已按 Elo、Poisson、盘口信号和实时上下文进行综合修正。本产品仅用于足球概率研究，不构成投注建议。'];
+    const qwenStatus = qwenEvidence
+      ? '千问证据综合已参与：已读取其它成功数据源，并整理伤病、战术、更衣室、资本政治、盘口和赛程等维度。'
+      : '千问证据综合未参与或未成功返回；本次只使用其它成功数据源。';
+    return [
+      '已接入并成功返回的数据源：' + connected + '。模型先以 Elo 强度和 Poisson 进球分布作为基础概率，再叠加盘口、赛程、新闻与 AI 上下文的平均修正。' + qwenStatus + ' 下方“最终综合推理”和“已使用的实时证据”展示具体参考因素。'
+    ];
   }
-  return Array.isArray(contexts) && contexts.length
-    ? contexts.map((item) => item.summary || item.provider + ' context applied.')
-    : ['No successful live model context was supplied to this prediction.'];
+
+  return [
+    'Connected sources: ' + connected + '. The model starts from Elo and Poisson, then applies average adjustments from odds, fixtures, news, and AI context. Detailed evidence appears in the final synthesis section.'
+  ];
 }
 
 function aggregationLabel() {

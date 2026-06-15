@@ -245,6 +245,8 @@ const venueOptions = [
 
 
 
+const BEIJING_TIME_ZONE = 'Asia/Shanghai';
+
 const emptyOdds = { home: '', draw: '', away: '' };
 
 const emptyLiveState = {
@@ -3769,26 +3771,8 @@ export default function Predict() {
 
 
 
-                <Info label="Date" value={formatDate(matchInfo.date)} />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                <Info label="Kickoff" value={matchInfo.time} />
+                <Info label="Date" value={formatBeijingDate(matchInfo.date, matchInfo.time)} />
+                <Info label="Kickoff" value={formatBeijingTime(matchInfo.date, matchInfo.time) + ' 北京时间'} />
 
 
 
@@ -9301,6 +9285,29 @@ function analyzeOdds(home, draw, away) {
 
 
 
+
+
+function parseUtcKickoff(dateStr, timeStr) {
+  return new Date(dateStr + 'T' + (timeStr || '00:00') + ':00Z');
+}
+
+function formatBeijingDate(dateStr, timeStr) {
+  return parseUtcKickoff(dateStr, timeStr).toLocaleDateString('zh-CN', {
+    timeZone: BEIJING_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+    weekday: 'short',
+  });
+}
+
+function formatBeijingTime(dateStr, timeStr) {
+  return parseUtcKickoff(dateStr, timeStr).toLocaleTimeString('zh-CN', {
+    timeZone: BEIJING_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
 
 
 function inferHostTeam(stadium) {
