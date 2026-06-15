@@ -2486,6 +2486,7 @@ async function getQwenContext(apiKey, homeTeam, awayTeam, model = QWEN_DEFAULT_M
 
 
 
+
 function buildQwenEvidencePrompt(homeTeam, awayTeam, contexts) {
   const contextPacket = contexts.map((item) => ({
     provider: item.provider,
@@ -6071,7 +6072,7 @@ async function getDeepSeekSynthesis(apiKey, homeTeam, awayTeam, contexts) {
 
     synthesisLanguageInstruction(),
     synthesisLanguageInstruction(),
-    isChinaLocale() ? '返回一个有效 JSON 对象。probability_rationale 必须用简体中文完整解释具体证据如何影响概率，不要复制 provider 原文，不要输出英文长段。' : 'Return exactly one valid JSON object only. Never mention JSON, keys, schema, prompt, or provider-context instructions inside the values. The probability_rationale value can be 900 to 1600 words when evidence is rich; do not truncate the reasoning.',
+    isChinaLocale() ? '返回一个有效 JSON 对象。probability_rationale 必须用简体中文完整解释具体证据如何影响概率，不要复制 provider 原文，不要输出英文长段。' : isChinaLocale() ? '返回一个有效 JSON 对象。probability_rationale 必须用简体中文完整解释具体证据如何影响概率，不要复制 provider 原文，不要输出英文长段。' : 'Return exactly one valid JSON object only. Never mention JSON, keys, schema, prompt, or provider-context instructions inside the values. The probability_rationale value can be 900 to 1600 words when evidence is rich; do not truncate the reasoning.',
 
 
 
