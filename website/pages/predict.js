@@ -131,6 +131,23 @@ import { GROUP_STAGES } from '../lib/predictor';
 
 
 
+
+function volatilityTone(value) {
+  const number = Number(value) || 0;
+  if (number >= 70) return 'text-rose-200';
+  if (number >= 48) return 'text-amber-200';
+  return 'text-emerald-200';
+}
+
+function volatilityLabel(item, fallback) {
+  return item?.risk_bands?.[fallback] || '';
+}
+
+function scoreTotal(score) {
+  return String(score || '0-0').split('-').map((item) => Number(item) || 0).reduce((a, b) => a + b, 0);
+}
+
+
 const venueOptions = [
 
 
@@ -5639,6 +5656,34 @@ export default function Predict() {
 
 
 
+                {result.volatility_layer && (
+                  <div className="rounded-lg border border-rose-300/20 bg-rose-400/5 p-6">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-white">Live volatility layer</h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-300">
+                          Over/BTTS, comeback risk, market heat, and upset pressure explain why the top score is not enough.
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-rose-400/10 px-4 py-2 text-sm font-bold text-rose-100">
+                        Big-score risk {result.volatility_layer.big_score_risk}%
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                      <Info label="Over 2.5" value={result.volatility_layer.over_2_5 + '% · ' + volatilityLabel(result.volatility_layer, 'over_2_5')} />
+                      <Info label="Over 3.5" value={result.volatility_layer.over_3_5 + '% · ' + volatilityLabel(result.volatility_layer, 'over_3_5')} />
+                      <Info label="BTTS" value={result.volatility_layer.btts + '% · ' + volatilityLabel(result.volatility_layer, 'btts')} />
+                      <Info label="Comeback risk" value={result.volatility_layer.comeback_risk + '% · ' + volatilityLabel(result.volatility_layer, 'comeback_risk')} />
+                      <Info label="Market heat" value={result.volatility_layer.market_heat_index + '% · ' + volatilityLabel(result.volatility_layer, 'market_heat_index')} />
+                      <Info label="Upset pressure" value={result.volatility_layer.upset_pressure + '% · ' + volatilityLabel(result.volatility_layer, 'upset_pressure')} />
+                    </div>
+                    <div className="mt-4 rounded-md bg-slate-950/50 p-4 text-sm leading-6 text-rose-50/90">
+                      <p>{result.volatility_layer.explanation}</p>
+                      <p className="mt-2 font-semibold text-amber-100">{result.volatility_layer.top_score_warning}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
 
 
@@ -5754,6 +5799,11 @@ export default function Predict() {
 
 
                         <div className="mt-1 text-sm text-slate-400">{item.probability}%</div>
+                        {result.volatility_layer?.big_score_risk >= 45 && scoreTotal(item.score) <= 1 && (
+                          <div className="mt-2 rounded bg-amber-300/10 px-2 py-1 text-[11px] font-bold text-amber-100">
+                            Big-score risk active
+                          </div>
+                        )}
 
 
 
@@ -6360,6 +6410,7 @@ export default function Predict() {
 
 
                     : 'No live model context was applied. Check Settings API keys and provider network status.'}
+                  {result.volatility_layer?.top_score_warning ? ' ' + result.volatility_layer.top_score_warning : ''}
 
 
 

@@ -167,6 +167,167 @@ function getTeamById(id) {
   return WORLD_CUP_2026_TEAMS.find(t => t.id === id);
 }
 
+
+function roundPct(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, Number(value) || 0));
+}
+
+function normalizePercentTriple(home, draw, away) {
+  const safe = [home, draw, away].map((value) => Math.max(0.1, Number(value) || 0.1));
+  const total = safe[0] + safe[1] + safe[2];
+  return {
+    home: roundPct((safe[0] / total) * 100),
+    draw: roundPct((safe[1] / total) * 100),
+    away: roundPct((safe[2] / total) * 100),
+  };
+}
+
+function scoreVolatilityMetrics(scoreProbs) {
+  const entries = Object.entries(scoreProbs || {});
+  let over25 = 0;
+  let over35 = 0;
+  let btts = 0;
+  let topScore = 0;
+  let highScoreTail = 0;
+  let lateChaosScores = 0;
+
+  entries.forEach(([score, probability]) => {
+    const [home, away] = score.split('-').map((item) => Number(item));
+    const prob = Number(probability) || 0;
+    if (!Number.isFinite(home) || !Number.isFinite(away)) return;
+    const totalGoals = home + away;
+    if (totalGoals > 2.5) over25 += prob;
+    if (totalGoals > 3.5) over35 += prob;
+    if (home > 0 && away > 0) btts += prob;
+    if (totalGoals >= 4) highScoreTail += prob;
+    if (Math.abs(home - away) <= 1 && totalGoals >= 3) lateChaosScores += prob;
+    topScore = Math.max(topScore, prob);
+  });
+
+  const openMatchIndex = clampNumber((over25 * 0.38 + btts * 0.34 + over35 * 0.28) * 100, 0, 100);
+  const topScoreConcentration = clampNumber(topScore * 100, 0, 100);
+
+  return {
+    over_2_5: roundPct(over25 * 100),
+    over_3_5: roundPct(over35 * 100),
+    btts: roundPct(btts * 100),
+    high_score_tail: roundPct(highScoreTail * 100),
+    late_chaos_scores: roundPct(lateChaosScores * 100),
+    open_match_index: roundPct(openMatchIndex),
+    top_score_concentration: roundPct(topScoreConcentration),
+  };
+}
+
+function riskBand(value) {
+  const score = Number(value) || 0;
+  if (score >= 70) return 'High';
+  if (score >= 35) return 'Medium';
+  return 'Low';
+}
+
+function buildVolatilityLayer({
+  homeTeam,
+  awayTeam,
+  homeElo,
+  awayElo,
+  venue,
+  probabilities,
+  poissonResult,
+  oddsProbabilities,
+  expectedGoals,
+  hasOdds,
+}) {
+  const scoreMetrics = scoreVolatilityMetrics(poissonResult.scoreProbs);
+  const eloGapAbs = Math.abs(homeElo - awayElo);
+  const combinedElo = (Number(homeElo) || 1500) + (Number(awayElo) || 1500);
+  const marketSpread = hasOdds
+    ? Math.max(oddsProbabilities.home, oddsProbabilities.draw, oddsProbabilities.away) - Math.min(oddsProbabilities.home, oddsProbabilities.draw, oddsProbabilities.away)
+    : 0;
+  const compressedStrength = clampNumber(1 - eloGapAbs / 280, 0, 1);
+  const qualityFloor = clampNumber((combinedElo - 3450) / 42, 0, 10);
+  const balancedMarketStress = hasOdds ? clampNumber((34 - marketSpread) * 0.35, 0, 8) : 3;
+  const tailStress = clampNumber(compressedStrength * 10 + qualityFloor + balancedMarketStress + (venue === 'neutral' ? 2 : 0), 0, 24);
+  const adjustedOver25 = roundPct(clampNumber(scoreMetrics.over_2_5 + tailStress * 0.55, 0, 92));
+  const adjustedOver35 = roundPct(clampNumber(scoreMetrics.over_3_5 + tailStress * 0.30, 0, 78));
+  const adjustedBtts = roundPct(clampNumber(scoreMetrics.btts + tailStress * 0.45, 0, 88));
+  const favoriteSide = probabilities.home >= probabilities.away
+    ? { side: 'home', team: homeTeam, win: probabilities.home, market: oddsProbabilities.home, eloEdge: homeElo - awayElo }
+    : { side: 'away', team: awayTeam, win: probabilities.away, market: oddsProbabilities.away, eloEdge: awayElo - homeElo };
+  const underdogSide = favoriteSide.side === 'home'
+    ? { team: awayTeam, win: probabilities.away, market: oddsProbabilities.away }
+    : { team: homeTeam, win: probabilities.home, market: oddsProbabilities.home };
+  const marketGap = hasOdds ? Math.abs((favoriteSide.market || 33.3) - favoriteSide.win) : 0;
+  const favoriteHeat = hasOdds
+    ? clampNumber((favoriteSide.market - 48) * 1.1 + marketGap * 0.8 - Math.max(0, favoriteSide.eloEdge - 230) * 0.025, 0, 100)
+    : clampNumber(Math.max(probabilities.home, probabilities.away) - 42, 0, 100);
+  const strengthCompression = clampNumber(1 - Math.abs(homeElo - awayElo) / 360, 0, 1);
+  const upsetPressure = clampNumber(
+    probabilities.draw * 0.35 +
+    underdogSide.win * 0.42 +
+    adjustedBtts * 0.10 +
+    scoreMetrics.open_match_index * 0.08 +
+    strengthCompression * 18 +
+    (favoriteHeat > 55 ? 8 : 0),
+    0,
+    100
+  );
+  const comebackRisk = clampNumber(
+    adjustedBtts * 0.25 +
+    adjustedOver25 * 0.22 +
+    probabilities.draw * 0.22 +
+    underdogSide.win * 0.20 +
+    scoreMetrics.late_chaos_scores * 0.11,
+    0,
+    100
+  );
+  const bigScoreRisk = clampNumber(
+    adjustedOver25 * 0.42 +
+    adjustedOver35 * 0.34 +
+    adjustedBtts * 0.16 +
+    scoreMetrics.high_score_tail * 0.08,
+    0,
+    100
+  );
+
+  const totalExpectedGoals = roundPct((expectedGoals.home || 0) + (expectedGoals.away || 0));
+  const topScoreWarning = scoreMetrics.top_score_concentration < 18 || bigScoreRisk >= 45 || comebackRisk >= 45
+    ? 'Do not read the top score as a single-point forecast. It is only the highest cell in a wider score distribution; volatility, both-teams-to-score risk, and market pressure can make 2-1, 2-2, 3-1, or 3-2 type outcomes materially live.'
+    : 'The top score is useful as a baseline, but the distribution still needs Over, BTTS, market heat, and upset pressure before making a football analytics report.';
+
+  return {
+    over_2_5: adjustedOver25,
+    over_3_5: adjustedOver35,
+    btts: adjustedBtts,
+    comeback_risk: roundPct(comebackRisk),
+    market_heat_index: roundPct(favoriteHeat),
+    upset_pressure: roundPct(upsetPressure),
+    big_score_risk: roundPct(bigScoreRisk),
+    open_match_index: scoreMetrics.open_match_index,
+    tail_stress: roundPct(tailStress),
+    top_score_concentration: scoreMetrics.top_score_concentration,
+    high_score_tail: scoreMetrics.high_score_tail,
+    favorite: favoriteSide.team,
+    underdog: underdogSide.team,
+    risk_bands: {
+      over_2_5: riskBand(adjustedOver25),
+      over_3_5: riskBand(adjustedOver35),
+      btts: riskBand(adjustedBtts),
+      comeback_risk: riskBand(comebackRisk),
+      market_heat_index: riskBand(favoriteHeat),
+      upset_pressure: riskBand(upsetPressure),
+      big_score_risk: riskBand(bigScoreRisk),
+    },
+    explanation: 'Volatility layer blends Poisson score tails, expected goals (' + totalExpectedGoals + '), BTTS, market heat, Elo compression, and underdog/draw pressure. Tail stress ' + roundPct(tailStress) + '/24 is added when two capable teams are closely matched, because a single low-score top cell can understate 2-2, 3-1, or 3-2 paths.',
+    top_score_warning: topScoreWarning,
+    analytics_only: 'Football analytics only. This is not betting advice and does not guarantee an outcome.',
+  };
+}
+
+
 class OddsAnalyzer {
   static calculateImpliedProbability(odds) {
     if (odds <= 1.0) return 0.0;
@@ -343,24 +504,47 @@ class IntegratedPredictor {
     
     const confidence = Math.min(95, 70 + Math.abs(finalHome - finalAway) * 50);
     const mostLikelyScores = PoissonPredictor.getMostLikelyScores(poissonResult.scoreProbs, 7);
+    const probabilityPercentages = {
+      home: Math.round(finalHome * 10000) / 100,
+      draw: Math.round(finalDraw * 10000) / 100,
+      away: Math.round(finalAway * 10000) / 100
+    };
+    const expectedGoalSummary = {
+      home: Math.round(homeExpectedGoals * 100) / 100,
+      away: Math.round(awayExpectedGoals * 100) / 100
+    };
+    const oddsPercentages = {
+      home: Math.round(oddsHome * 10000) / 100,
+      draw: Math.round(oddsDraw * 10000) / 100,
+      away: Math.round(oddsAway * 10000) / 100,
+    };
+    const volatilityLayer = buildVolatilityLayer({
+      homeTeam,
+      awayTeam,
+      homeElo,
+      awayElo,
+      venue,
+      probabilities: probabilityPercentages,
+      poissonResult,
+      oddsProbabilities: oddsPercentages,
+      expectedGoals: expectedGoalSummary,
+      hasOdds: Boolean(homeOdds && drawOdds && awayOdds),
+    });
     
     return {
       home_team: homeTeam,
       away_team: awayTeam,
-      probabilities: {
-        home: Math.round(finalHome * 10000) / 100,
-        draw: Math.round(finalDraw * 10000) / 100,
-        away: Math.round(finalAway * 10000) / 100
-      },
-      expected_goals: {
-        home: Math.round(homeExpectedGoals * 100) / 100,
-        away: Math.round(awayExpectedGoals * 100) / 100
-      },
+      probabilities: probabilityPercentages,
+      expected_goals: expectedGoalSummary,
       confidence: Math.round(confidence * 100) / 100,
       most_likely_scores: mostLikelyScores.map(([score, prob]) => ({
         score,
-        probability: Math.round(prob * 10000) / 100
+        probability: Math.round(prob * 10000) / 100,
+        risk_note: volatilityLayer.big_score_risk >= 35 && (score.split('-').map(Number).reduce((a, b) => a + b, 0) <= 1)
+          ? 'Low-score top cell, but big-score risk is active'
+          : null
       })),
+      volatility_layer: volatilityLayer,
       model_breakdown: {
         elo: {
           home: Math.round(eloResult.homeWin * 10000) / 100,

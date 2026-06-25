@@ -108,6 +108,35 @@ function nextGoalModel({ base, live, homeScore, awayScore, minute, homeElo, away
   };
 }
 
+
+function liveVolatilityLayer(baseResult, live, market, state) {
+  const baseVolatility = baseResult.volatility_layer || {};
+  const minute = Number(state.minute) || 0;
+  const scoreGap = Math.abs((Number(state.homeScore) || 0) - (Number(state.awayScore) || 0));
+  const redGap = Math.abs((Number(state.homeRedCards) || 0) - (Number(state.awayRedCards) || 0));
+  const marketMove = market
+    ? Math.max(
+        Math.abs((market.home || 0) - (baseResult.probabilities?.home || 0)),
+        Math.abs((market.draw || 0) - (baseResult.probabilities?.draw || 0)),
+        Math.abs((market.away || 0) - (baseResult.probabilities?.away || 0))
+      )
+    : 0;
+  const lateGameBoost = minute >= 60 ? Math.min(18, (minute - 55) * 0.6) : 0;
+  const comeback = clampNumber((baseVolatility.comeback_risk || 0) + lateGameBoost + marketMove * 0.35 + redGap * 8 - scoreGap * 4, 0, 100);
+  const heat = clampNumber((baseVolatility.market_heat_index || 0) + marketMove * 0.65 + lateGameBoost * 0.4, 0, 100);
+  const upset = clampNumber((baseVolatility.upset_pressure || 0) + marketMove * 0.35 + redGap * 7 + (scoreGap === 1 ? 4 : 0), 0, 100);
+
+  return {
+    ...baseVolatility,
+    comeback_risk: roundPct(comeback),
+    market_heat_index: roundPct(heat),
+    upset_pressure: roundPct(upset),
+    live_mode: true,
+    live_explanation: 'Live volatility adds minute, score gap, red-card gap, and in-play market movement to the pre-match volatility layer.',
+  };
+}
+
+
 export function applyLiveMatchContext(baseResult, liveState = {}, teams = {}) {
   if (!liveState || !liveState.enabled) return baseResult;
 
@@ -172,6 +201,13 @@ export function applyLiveMatchContext(baseResult, liveState = {}, teams = {}) {
     ...baseResult,
     probabilities: live,
     confidence: Math.round(Math.min(95, Math.max(1, (baseResult.confidence || 70) + (market ? 3 : 0) + Math.min(4, minute / 30))) * 100) / 100,
+    volatility_layer: liveVolatilityLayer(baseResult, live, market, {
+      minute,
+      homeScore,
+      awayScore,
+      homeRedCards,
+      awayRedCards,
+    }),
     live_context: {
       applied: true,
       mode: liveState.source || 'manual-live-mvp',
