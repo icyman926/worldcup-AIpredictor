@@ -94,6 +94,7 @@ import Layout from '../components/Layout';
 
 
 import { GROUP_STAGES } from '../lib/predictor';
+import { formatBeijingDateFromUkSummer, formatBeijingTimeFromUkSummer } from '../lib/kickoff-time';
 
 
 
@@ -494,6 +495,7 @@ export default function Predict() {
 
 
   const [matchInfo, setMatchInfo] = useState(null);
+  const [matchResults, setMatchResults] = useState({});
 
 
 
@@ -570,6 +572,15 @@ export default function Predict() {
 
 
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/matches/status')
+      .then((response) => response.ok ? response.json() : { matches: {} })
+      .then((data) => { if (active) setMatchResults(data.matches || {}); })
+      .catch(() => { if (active) setMatchResults({}); });
+    return () => { active = false; };
+  }, []);
 
   const updateLiveState = (key, value) => setLiveState((current) => ({ ...current, [key]: value }));
 
@@ -2211,6 +2222,10 @@ export default function Predict() {
 
 
     if (!homeTeam || !awayTeam || homeTeam === awayTeam) return;
+    if (isCompletedMatch) {
+      setError('This fixture has finished. Final score is shown instead of running a new forecast.');
+      return;
+    }
 
 
 
@@ -2509,15 +2524,7 @@ export default function Predict() {
 
 
 
-
-
-
-
         home_team: homeTeam,
-
-
-
-
 
 
 
@@ -2547,11 +2554,8 @@ export default function Predict() {
 
 
 
-
-
-
-
         venue,
+        match_id: matchInfo?.id || null,
 
 
 
@@ -3181,42 +3185,9 @@ export default function Predict() {
 
 
   };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  const completedMatch = matchInfo ? matchResults[matchInfo.id] : null;
+  const isCompletedMatch = Boolean(completedMatch?.completed);
+  const completedScore = isCompletedMatch ? ((completedMatch.score?.home ?? '-') + '-' + (completedMatch.score?.away ?? '-')) : null;
 
   return (
 
@@ -3789,7 +3760,7 @@ export default function Predict() {
 
 
                 <Info label="Date" value={formatBeijingDate(matchInfo.date, matchInfo.time)} />
-                <Info label="Kickoff" value={formatBeijingTime(matchInfo.date, matchInfo.time) + ' 北京时间'} />
+                <Info label="Kickoff" value={formatBeijingTime(matchInfo.date, matchInfo.time) + ' Beijing time'} />
 
 
 
@@ -3809,6 +3780,7 @@ export default function Predict() {
 
 
                 <Info label="Stadium" value={matchInfo.stadium} />
+                {isCompletedMatch && <Info label="Final score" value={'FT ' + completedScore} />}
 
 
 
@@ -4795,7 +4767,7 @@ export default function Predict() {
 
 
 
-                disabled={loading || !homeTeam || !awayTeam || homeTeam === awayTeam}
+                disabled={loading || isCompletedMatch || !homeTeam || !awayTeam || homeTeam === awayTeam}
 
 
 
@@ -4852,7 +4824,7 @@ export default function Predict() {
 
 
 
-                {loading ? 'Calling APIs...' : 'Generate prediction'}
+                {isCompletedMatch ? 'Match completed' : (loading ? 'Calling APIs...' : 'Generate prediction')}
 
 
 
@@ -9343,23 +9315,12 @@ function parseUtcKickoff(dateStr, timeStr) {
 }
 
 function formatBeijingDate(dateStr, timeStr) {
-  return parseUtcKickoff(dateStr, timeStr).toLocaleDateString('zh-CN', {
-    timeZone: BEIJING_TIME_ZONE,
-    month: 'short',
-    day: 'numeric',
-    weekday: 'short',
-  });
+  return formatBeijingDateFromUkSummer(dateStr, timeStr);
 }
 
 function formatBeijingTime(dateStr, timeStr) {
-  return parseUtcKickoff(dateStr, timeStr).toLocaleTimeString('zh-CN', {
-    timeZone: BEIJING_TIME_ZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return formatBeijingTimeFromUkSummer(dateStr, timeStr);
 }
-
 
 function inferHostTeam(stadium) {
 

@@ -1,14 +1,24 @@
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Flag from '../components/Flag';
 import Layout from '../components/Layout';
 import { GROUP_STAGES, WORLD_CUP_2026_TEAMS, getTeamById } from '../lib/predictor';
+import { formatBeijingDateFromUkSummer, formatBeijingTimeFromUkSummer } from '../lib/kickoff-time';
 
 const groups = GROUP_STAGES.map((group) => group.group);
-const BEIJING_TIME_ZONE = 'Asia/Shanghai';
 
 export default function GroupStage() {
   const [selectedGroup, setSelectedGroup] = useState('A');
+  const [matchResults, setMatchResults] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/matches/status')
+      .then((response) => response.ok ? response.json() : { matches: {} })
+      .then((data) => { if (active) setMatchResults(data.matches || {}); })
+      .catch(() => { if (active) setMatchResults({}); });
+    return () => { active = false; };
+  }, []);
 
   const groupTeams = useMemo(
     () => WORLD_CUP_2026_TEAMS.filter((team) => team.group === selectedGroup),
@@ -54,11 +64,13 @@ export default function GroupStage() {
               {currentGroupMatches.map((match) => {
                 const team1 = getTeamById(match.team1);
                 const team2 = getTeamById(match.team2);
+                const completedMatch = matchResults[match.id]?.completed ? matchResults[match.id] : null;
+                const finalScore = completedMatch ? ((completedMatch.score?.home ?? '-') + '-' + (completedMatch.score?.away ?? '-')) : null;
                 return (
                   <div key={match.id} className="grid gap-4 rounded-lg border border-white/10 bg-slate-900 p-4 md:grid-cols-[0.8fr_1.3fr_1.2fr_auto] md:items-center">
                     <div>
                       <div className="text-sm text-slate-400">{formatBeijingDate(match.date, match.time)}</div>
-                      <div className="font-bold text-white">{formatBeijingTime(match.date, match.time)} 北京时间</div>
+                      <div className="font-bold text-white">{formatBeijingTime(match.date, match.time)} Beijing time</div>
                     </div>
                     <div className="flex items-center gap-3">
                       <TeamBadge team={team1} />
@@ -69,12 +81,18 @@ export default function GroupStage() {
                       <div className="text-xs uppercase tracking-wide text-slate-500">Stadium</div>
                       <div className="text-sm font-semibold text-slate-200">{match.stadium}</div>
                     </div>
-                    <Link
-                      href={{ pathname: '/predict', query: { home: match.team1, away: match.team2, match: match.id } }}
-                      className="rounded-md bg-white px-4 py-2 text-center font-bold text-slate-950 transition hover:bg-emerald-200"
-                    >
-                      Predict
-                    </Link>
+                    {completedMatch ? (
+                      <div className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-center font-bold text-emerald-200">
+                        FT {finalScore}
+                      </div>
+                    ) : (
+                      <Link
+                        href={{ pathname: '/predict', query: { home: match.team1, away: match.team2, match: match.id } }}
+                        className="rounded-md bg-white px-4 py-2 text-center font-bold text-slate-950 transition hover:bg-emerald-200"
+                      >
+                        Predict
+                      </Link>
+                    )}
                   </div>
                 );
               })}
@@ -95,24 +113,10 @@ function TeamBadge({ team }) {
   );
 }
 
-function parseUtcKickoff(dateStr, timeStr) {
-  return new Date(dateStr + 'T' + (timeStr || '00:00') + ':00Z');
-}
-
 function formatBeijingDate(dateStr, timeStr) {
-  return parseUtcKickoff(dateStr, timeStr).toLocaleDateString('zh-CN', {
-    timeZone: BEIJING_TIME_ZONE,
-    month: 'short',
-    day: 'numeric',
-    weekday: 'short',
-  });
+  return formatBeijingDateFromUkSummer(dateStr, timeStr);
 }
 
 function formatBeijingTime(dateStr, timeStr) {
-  return parseUtcKickoff(dateStr, timeStr).toLocaleTimeString('zh-CN', {
-    timeZone: BEIJING_TIME_ZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return formatBeijingTimeFromUkSummer(dateStr, timeStr);
 }
