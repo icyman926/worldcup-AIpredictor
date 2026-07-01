@@ -1,14 +1,22 @@
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const dataDir = path.join(root, 'data');
+const logsDir = path.join(root, 'logs');
 const outFile = path.join(dataDir, 'match-results.json');
+
+const FOOTBALL_DATA_KEY_NAMES = [
+  'FOOTBALL_DATA_API_KEY',
+  'NEXT_PUBLIC_FOOTBALL_DATA_API_KEY',
+  'FOOTBALL_DATA_TOKEN',
+  'FOOTBALLDATA_API_KEY',
+];
 
 function loadEnvFile() {
   const envPath = path.join(root, '.env.local');
-  if (!fs.existsSync(envPath)) return;
+  if (!fs.existsSync(envPath)) return false;
   for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
@@ -17,6 +25,14 @@ function loadEnvFile() {
     const value = trimmed.slice(index + 1).trim().replace(/^['"]|['"]$/g, '');
     if (key && !process.env[key]) process.env[key] = value;
   }
+  return true;
+}
+
+function getFootballDataKey() {
+  for (const name of FOOTBALL_DATA_KEY_NAMES) {
+    if (process.env[name]) return { name, value: process.env[name] };
+  }
+  return null;
 }
 
 function normalizeName(name) {
@@ -35,8 +51,28 @@ function readExisting() {
   }
 }
 
-async function loadFixtures() {
-  const predictor = await import(pathToFileURL(path.join(root, 'lib', 'predictor.js')).href);
+function loadFixtures() {
+  const predictorPath = path.join(root, 'lib', 'predictor.js');
+  let source = fs.readFileSync(predictorPath, 'utf8');
+  source = source.replace(/export\s+\{\s*WORLD_CUP_2026_TEAMS,\s*GROUP_STAGES,\s*getTeamByName,\s*getTeamById,\s*IntegratedPredictor\s*\};?/, 'module.exports = { WORLD_CUP_2026_TEAMS, GROUP_STAGES, getTeamByName, getTeamById, IntegratedPredictor };');
+  const sandbox = {
+    module: { exports: {} },
+    exports: {},
+    console,
+    Math,
+    Number,
+    String,
+    Boolean,
+    Array,
+    Object,
+    RegExp,
+    Date,
+  };
+  vm.runInNewContext(source, sandbox, { filename: predictorPath });
+  const predictor = sandbox.module.exports;
+  if (!Array.isArray(predictor.GROUP_STAGES) || !Array.isArray(predictor.WORLD_CUP_2026_TEAMS)) {
+    throw new Error('Could not load local fixture data from lib/predictor.js');
+  }
   return predictor.GROUP_STAGES.flatMap((group) => group.matches.map((match) => ({
     ...match,
     group: group.group,
@@ -56,13 +92,16 @@ function matchLocalFixture(fixtures, apiMatch) {
 }
 
 async function fetchFootballData() {
-  const key = process.env.FOOTBALL_DATA_API_KEY || process.env.NEXT_PUBLIC_FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_TOKEN || process.env.FOOTBALLDATA_API_KEY;
+  const key = getFootballDataKey();
   if (!key) {
     console.log('No Football-Data API key found. Keep existing match-results.json unchanged.');
+    console.log('Add one of these keys to .env.local: ' + FOOTBALL_DATA_KEY_NAMES.join(', '));
+    console.log('Example: FOOTBALL_DATA_API_KEY=your_real_key');
     return null;
   }
+  console.log('Using Football-Data key from ' + key.name + '.');
   const response = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
-    headers: { 'X-Auth-Token': key },
+    headers: { 'X-Auth-Token': key.value },
   });
   if (!response.ok) {
     throw new Error('Football-Data update failed: HTTP ' + response.status + ' ' + await response.text());
@@ -72,8 +111,14 @@ async function fetchFootballData() {
 }
 
 async function main() {
-  loadEnvFile();
-  const fixtures = await loadFixtures();
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.mkdirSync(logsDir, { recursive: true });
+
+  const envLoaded = loadEnvFile();
+  console.log('Match result updater started at ' + new Date().toISOString());
+  console.log(envLoaded ? 'Loaded .env.local.' : 'No .env.local file found.');
+
+  const fixtures = loadFixtures();
   const existing = readExisting();
   const apiMatches = await fetchFootballData();
   if (!apiMatches) return;
@@ -106,7 +151,6 @@ async function main() {
     matches[fixture.id] = record;
   }
 
-  fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(outFile, JSON.stringify({
     generatedAt: new Date().toISOString(),
     source: 'football-data',
@@ -114,7 +158,7 @@ async function main() {
     finished,
     matches,
   }, null, 2) + '\n');
-  console.log('Updated match results:', mapped + ' mapped, ' + finished + ' completed.');
+  console.log('Updated match results: ' + mapped + ' mapped, ' + finished + ' completed.');
   console.log(outFile);
 }
 
